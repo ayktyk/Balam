@@ -56,6 +56,76 @@ export default function SettingsScreen() {
     }
   }
 
+  function buildHtmlExport(entries: any[], familyName: string) {
+    const typeLabels: Record<string, string> = {
+      letter: 'Mektup',
+      memory: 'Ani',
+      milestone: 'Adim',
+      voice: 'Ses Kaydi',
+    };
+
+    const entryCards = entries.map((e) => {
+      const date = e.entryDate
+        ? new Date(e.entryDate).toLocaleDateString('tr-TR', {
+            day: 'numeric', month: 'long', year: 'numeric', weekday: 'long',
+          })
+        : '';
+
+      const photos = (e.photoUrls || [])
+        .map((url: string) => `<img src="${url}" style="max-width:100%;border-radius:12px;margin:8px 0;" />`)
+        .join('');
+
+      const audio = e.voiceUrl
+        ? `<div style="margin:8px 0;"><audio controls src="${e.voiceUrl}" style="width:100%;"></audio></div>`
+        : '';
+
+      const badge = e.isCapsule ? '<span style="background:#8B7355;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Zaman Kapsulu</span> ' : '';
+      const privateBadge = e.isPrivate ? '<span style="background:#C9A96E;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Gizli Mektup</span> ' : '';
+
+      return `
+        <div style="background:#fff;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:20px;">${e.authorEmoji || '🌿'}</span>
+            <strong>${e.authorName || ''}</strong>
+            <span style="color:#6B5B45;font-size:13px;margin-left:auto;">${typeLabels[e.type] || ''}</span>
+          </div>
+          <div style="color:#6B5B45;font-size:13px;margin-bottom:12px;">${date}${e.yaseminAgeLabel ? ' · ' + e.yaseminAgeLabel : ''}</div>
+          ${badge}${privateBadge}
+          ${e.title ? `<h3 style="margin:8px 0 4px;font-family:Georgia,serif;">${e.title}</h3>` : ''}
+          ${photos}
+          ${audio}
+          <div style="white-space:pre-wrap;line-height:1.7;font-family:Georgia,serif;">${e.body || ''}</div>
+        </div>`;
+    }).join('');
+
+    const now = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    return `<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Balam — ${familyName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #F5F0E8; font-family: -apple-system, 'Segoe UI', sans-serif; color: #2C2416; padding: 20px; max-width: 680px; margin: 0 auto; }
+    h1 { font-family: Georgia, serif; text-align: center; margin: 32px 0 4px; }
+    .subtitle { text-align: center; color: #6B5B45; margin-bottom: 32px; font-size: 14px; }
+    img { display: block; }
+    audio { border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Balam</h1>
+  <div class="subtitle">${familyName} · ${entries.length} ani · ${now} tarihinde olusturuldu</div>
+  ${entryCards}
+  <div style="text-align:center;color:#6B5B45;font-size:12px;padding:32px 0;">
+    Balam ile olusturuldu
+  </div>
+</body>
+</html>`;
+  }
+
   async function handleExport() {
     if (!profile?.familyId) return;
 
@@ -79,48 +149,37 @@ export default function SettingsScreen() {
         };
       });
 
-      const exportData = {
-        family: {
-          id: profile.familyId,
-          name: familyData?.name || 'Balam Ailesi',
-          exportedAt: new Date().toISOString(),
-        },
-        entries: entries
-      };
-
-      const jsonString = JSON.stringify(exportData, null, 2);
+      const familyName = familyData?.name || 'Balam Ailesi';
+      const html = buildHtmlExport(entries, familyName);
 
       if (Platform.OS === 'web') {
-        // Web: Blob + download link
-        const blob = new Blob([jsonString], { type: 'application/json' });
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'balam-arsiv.json';
+        a.download = 'balam-arsiv.html';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        // Native: expo-file-system + expo-sharing
-        const fileUri = `${FileSystem.cacheDirectory}balam-arsiv.json`;
-        await FileSystem.writeAsStringAsync(fileUri, jsonString, {
+        const fileUri = `${FileSystem.cacheDirectory}balam-arsiv.html`;
+        await FileSystem.writeAsStringAsync(fileUri, html, {
           encoding: FileSystem.EncodingType.UTF8,
         });
 
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
-            mimeType: 'application/json',
-            dialogTitle: 'Balam Anı Arşivi',
-            UTI: 'public.json',
+            mimeType: 'text/html',
+            dialogTitle: 'Balam Ani Arsivi',
           });
         } else {
-          Alert.alert('Hata', 'Paylaşım bu cihazda desteklenmiyor.');
+          Alert.alert('Hata', 'Paylasim bu cihazda desteklenmiyor.');
         }
       }
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Hata', 'Anılar dışa aktarılamadı.');
+      Alert.alert('Hata', 'Anilar disa aktarilamadi.');
     } finally {
       setExporting(false);
     }

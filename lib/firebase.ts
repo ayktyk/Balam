@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -23,6 +23,8 @@ function init() {
   _db = getFirestore(app);
   _storage = getStorage(app);
   _auth = getAuth(app);
+  // PWA'da oturum kaliciligi: kapansa bile giris kalmali
+  setPersistence(_auth, browserLocalPersistence).catch(() => {});
   _storage.maxUploadRetryTime = 10000;
   _storage.maxOperationRetryTime = 10000;
   _initialized = true;
