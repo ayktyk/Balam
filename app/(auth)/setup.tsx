@@ -56,6 +56,7 @@ export default function SetupScreen() {
       await setDoc(familyRef, {
         name: 'Bizim Ailemiz',
         childAccessCodeHash: codeHash,
+        childAccessCode: DEFAULT_CHILD_CODE,
         childAccessEnabled: false,
         childMinAge: 0,
         createdAt: Timestamp.now(),

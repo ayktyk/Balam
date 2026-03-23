@@ -30,7 +30,13 @@ export default function SettingsScreen() {
       try {
         const docSnap = await getDoc(doc(db, 'families', profile.familyId));
         if (docSnap.exists()) {
-          setFamilyData(docSnap.data());
+          const data = docSnap.data();
+          // Eski ailelerde childAccessCode alanı yok — varsayılanı yaz
+          if (!data.childAccessCode && profile?.familyId) {
+            await updateDoc(doc(db, 'families', profile.familyId), { childAccessCode: '2026' });
+            data.childAccessCode = '2026';
+          }
+          setFamilyData(data);
         }
       } catch (error) {
         console.error('Aile verisi yüklenemedi:', error);
@@ -273,6 +279,18 @@ export default function SettingsScreen() {
                 />
               </View>
 
+              {familyData?.childAccessEnabled && (
+                <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: colors.border + '40' }]}>
+                  <View style={styles.settingInfo}>
+                    <Text style={[styles.cardText, { color: colors.ink }]}>Yasemin'in Giriş Kodu</Text>
+                    <Text style={[styles.cardHint, { color: colors.inkLight }]}>Yasemin giriş ekranında bu kodu girer.</Text>
+                  </View>
+                  <View style={[styles.childCodeBox, { backgroundColor: colors.warmWhite, borderColor: colors.border }]}>
+                    <Text style={[styles.childCodeText, { color: colors.ink }]}>{familyData?.childAccessCode ?? '2026'}</Text>
+                  </View>
+                </View>
+              )}
+
               <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: colors.border + '40' }]}>
                 <View style={styles.settingInfo}>
                   <Text style={[styles.cardText, { color: colors.ink }]}>Görüntüleme Yaşı</Text>
@@ -480,6 +498,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: FONTS.uiBold,
     borderWidth: 1,
+  },
+  childCodeBox: {
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderWidth: 1,
+  },
+  childCodeText: {
+    fontSize: 18,
+    fontFamily: FONTS.uiBold,
+    letterSpacing: 2,
   },
   childModeInfo: {
     flex: 1,
