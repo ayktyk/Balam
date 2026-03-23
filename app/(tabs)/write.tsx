@@ -146,7 +146,7 @@ export default function WriteScreen() {
     typeof params.title === 'string' ? params.title : ''
   );
   const [body, setBody] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(type === 'letter');
   const [isCapsule, setIsCapsule] = useState(false);
   const [capsuleAge, setCapsuleAge] = useState('');
   const [saving, setSaving] = useState(false);
@@ -222,6 +222,8 @@ export default function WriteScreen() {
     }
 
     setType(nextType);
+    // Mektuplar otomatik gizli, diger turler acik
+    setIsPrivate(nextType === 'letter');
 
     if (nextType === 'voice') {
       setSelectedPhotos([]);
@@ -773,19 +775,24 @@ export default function WriteScreen() {
           editable={!saving}
         />
 
-        <View style={styles.capsuleRow}>
-          <View style={styles.capsuleInfo}>
-            <Text style={styles.capsuleEmoji}>🔒</Text>
-            <Text style={styles.capsuleLabel}>Sadece benim mektubum</Text>
-            <Text style={styles.privateHint}>Diger ebeveyn goremez, sadece Yasemin okuyabilir</Text>
+        {isPrivate && (
+          <View style={styles.privateBanner}>
+            <Text style={styles.privateBannerEmoji}>🔒</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.privateBannerTitle}>Gizli mektup</Text>
+              <Text style={styles.privateBannerText}>Bu mektubu sadece sen ve Yasemin gorebilecek.</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsPrivate(false)}>
+              <Text style={styles.privateBannerToggle}>Acik yap</Text>
+            </TouchableOpacity>
           </View>
-          <Switch
-            value={isPrivate}
-            onValueChange={setIsPrivate}
-            trackColor={{ false: COLORS.border, true: COLORS.goldLight }}
-            thumbColor={isPrivate ? COLORS.gold : COLORS.creamDark}
-          />
-        </View>
+        )}
+
+        {!isPrivate && type === 'letter' && (
+          <TouchableOpacity style={styles.privateLink} onPress={() => setIsPrivate(true)}>
+            <Text style={styles.privateLinkText}>🔒 Gizli mektup olarak yaz</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.capsuleRow}>
           <View style={styles.capsuleInfo}>
@@ -1142,11 +1149,44 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.uiMedium,
     color: COLORS.capsule,
   },
-  privateHint: {
+  privateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: '#FFF8E1',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.gold + '40',
+  },
+  privateBannerEmoji: {
+    fontSize: 20,
+  },
+  privateBannerTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.uiBold,
+    color: COLORS.ink,
+  },
+  privateBannerText: {
     fontSize: 12,
     fontFamily: FONTS.ui,
     color: COLORS.inkLight,
     marginTop: 2,
+  },
+  privateBannerToggle: {
+    fontSize: 13,
+    fontFamily: FONTS.uiMedium,
+    color: COLORS.gold,
+  },
+  privateLink: {
+    marginBottom: SPACING.md,
+    padding: SPACING.sm,
+  },
+  privateLinkText: {
+    fontSize: 13,
+    fontFamily: FONTS.uiMedium,
+    color: COLORS.inkLight,
   },
   capsuleOptions: {
     flexDirection: 'row',
