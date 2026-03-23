@@ -1,6 +1,6 @@
 // Yasemin'in yaş hesaplama mantığı
 
-export const YASEMIN_DUE_DATE = new Date('2026-08-15');
+export const YASEMIN_DUE_DATE = new Date('2026-08-04');
 export const YASEMIN_BIRTH_DATE: Date | null = null; // doğunca güncelle
 
 export function getYaseminAgeLabel(entryDate: Date): string {

@@ -22,6 +22,7 @@ export const FONTS = {
   bodyBold: 'Lora_700Bold',
   bodyItalic: 'Lora_400Regular_Italic',
   ui: 'DMSans_400Regular',
+  uiMedium: 'DMSans_500Medium',
   uiBold: 'DMSans_700Bold',
 } as const;
 

@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { COLORS, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
 
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_MS = 5 * 60 * 1000; // 5 dakika
@@ -128,11 +128,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: FONTS.heading,
     color: COLORS.ink,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: FONTS.body,
     color: COLORS.inkLight,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xl,

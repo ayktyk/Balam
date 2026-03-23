@@ -11,7 +11,7 @@ import { router } from 'expo-router';
 import { doc, setDoc, collection, Timestamp } from 'firebase/firestore';
 import { hash } from 'bcryptjs';
 import { auth, db } from '../../lib/firebase';
-import { COLORS, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
 
 const EMOJI_OPTIONS = ['🌿', '🌸', '🦋', '🌙', '⭐', '🌊', '🍂', '🌻'];
 const DEFAULT_CHILD_CODE = '2026';
@@ -129,12 +129,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: FONTS.heading,
     color: COLORS.ink,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: FONTS.body,
     color: COLORS.inkLight,
     textAlign: 'center',
     marginTop: SPACING.sm,
@@ -147,11 +148,13 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     fontSize: 16,
+    fontFamily: FONTS.ui,
     color: COLORS.ink,
     marginBottom: SPACING.lg,
   },
   emojiLabel: {
     fontSize: 14,
+    fontFamily: FONTS.ui,
     color: COLORS.inkLight,
     marginBottom: SPACING.sm,
   },
@@ -190,6 +193,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.warmWhite,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.uiBold,
   },
 });

@@ -1,25 +1,31 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useState } from 'react';
+import { Alert, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { COLORS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '../../constants/theme';
 
 export default function SettingsScreen() {
   const { profile } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
 
   async function handleSignOut() {
-    Alert.alert('Çıkış', 'Çıkış yapmak istediğinden emin misin?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Çıkış Yap',
-        style: 'destructive',
-        onPress: async () => {
-          await signOut(auth);
-          router.replace('/(auth)/login');
-        },
-      },
-    ]);
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Çıkış yapmak istediğinden emin misin?')
+      : true; // Native'de Alert kullanilacak
+
+    if (!confirmed) return;
+
+    setSigningOut(true);
+    try {
+      await signOut(auth);
+      router.replace('/(auth)/login');
+    } catch (error) {
+      if (__DEV__) console.log('Çıkış hatası:', error);
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -65,8 +71,14 @@ export default function SettingsScreen() {
       </View>
 
       {/* Çıkış */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Çıkış Yap</Text>
+      <TouchableOpacity
+        style={[styles.signOutButton, signingOut && { opacity: 0.5 }]}
+        onPress={handleSignOut}
+        disabled={signingOut}
+      >
+        <Text style={styles.signOutText}>
+          {signingOut ? 'Çıkış yapılıyor...' : 'Çıkış Yap'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -93,11 +105,12 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONTS.heading,
     color: COLORS.ink,
   },
   profileRole: {
     fontSize: 13,
+    fontFamily: FONTS.ui,
     color: COLORS.inkLight,
     marginTop: 2,
   },
@@ -106,7 +119,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.uiBold,
     color: COLORS.inkLight,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -120,11 +133,12 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.uiMedium,
     color: COLORS.ink,
   },
   cardHint: {
     fontSize: 13,
+    fontFamily: FONTS.ui,
     color: COLORS.inkLight,
     marginTop: SPACING.xs,
   },
@@ -139,6 +153,6 @@ const styles = StyleSheet.create({
   signOutText: {
     color: COLORS.danger,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.uiMedium,
   },
 });

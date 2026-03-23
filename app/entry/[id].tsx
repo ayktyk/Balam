@@ -1,42 +1,193 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { router, useLocalSearchParams } from 'expo-router';
+import { deleteDoc, doc, getDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { COLORS, SPACING, RADIUS, SHADOWS, ENTRY_ICONS } from '../../constants/theme';
+import { useAuth } from '../../hooks/useAuth';
+import {
+  COLORS,
+  ENTRY_ICONS,
+  FONTS,
+  RADIUS,
+  SHADOWS,
+  SPACING,
+} from '../../constants/theme';
 import { Entry } from '../../types/entry';
 
 export default function EntryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [entry, setEntry] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+
+  const isOwner = Boolean(user && entry && user.uid === entry.authorId);
 
   useEffect(() => {
     async function fetchEntry() {
-      if (!id) return;
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const docSnap = await getDoc(doc(db, 'entries', id));
+
         if (docSnap.exists()) {
           setEntry({ id: docSnap.id, ...docSnap.data() } as Entry);
         }
       } catch (error) {
         if (__DEV__) {
-          const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
+          const message =
+            error instanceof Error ? error.message : 'Bilinmeyen hata';
           // eslint-disable-next-line no-console
-          console.log('Kayıt yükleme hatası:', message);
+          console.log('Kayit yukleme hatasi:', message);
         }
       } finally {
         setLoading(false);
       }
     }
+
     fetchEntry();
   }, [id]);
+
+  function showMessage(title: string, message: string) {
+    if (Platform.OS === 'web') {
+      window.alert(message);
+      return;
+    }
+
+    Alert.alert(title, message);
+  }
+
+  function confirmDelete() {
+    if (Platform.OS === 'web') {
+      return Promise.resolve(
+        window.confirm(
+          'Bu aniyi silmek istediginden emin misin? Bu islem geri alinamaz.'
+        )
+      );
+    }
+
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Aniyi sil',
+        'Bu ani kalici olarak silinecek. Devam etmek istiyor musun?',
+        [
+          {
+            text: 'Iptal',
+            style: 'cancel',
+            onPress: () => resolve(false),
+          },
+          {
+            text: 'Sil',
+            style: 'destructive',
+            onPress: () => resolve(true),
+          },
+        ],
+        {
+          cancelable: true,
+          onDismiss: () => resolve(false),
+        }
+      );
+    });
+  }
+
+  function startEditing() {
+    if (!entry || !isOwner) {
+      return;
+    }
+
+    setEditTitle(entry.title ?? '');
+    setEditBody(entry.body ?? '');
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!entry || !id) {
+      return;
+    }
+
+    if (!isOwner) {
+      showMessage(
+        'Yetkisiz islem',
+        'Sadece kendi kaydini duzenleyebilirsin.'
+      );
+      return;
+    }
+
+    if (!editBody.trim()) {
+      showMessage('Eksik icerik', 'Bir seyler yazmalisin.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const updatedAt = Timestamp.now();
+      const nextTitle = editTitle.trim() || null;
+      const nextBody = editBody.trim();
+
+      await updateDoc(doc(db, 'entries', id), {
+        title: nextTitle,
+        body: nextBody,
+        updatedAt,
+      });
+
+      setEntry({
+        ...entry,
+        title: nextTitle,
+        body: nextBody,
+        updatedAt,
+      });
+      setEditing(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Bir hata oldu.';
+      showMessage('Kaydetme hatasi', message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!id) {
+      return;
+    }
+
+    if (!isOwner) {
+      showMessage('Yetkisiz islem', 'Sadece kendi kaydini silebilirsin.');
+      return;
+    }
+
+    const confirmed = await confirmDelete();
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'entries', id));
+      router.back();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Bir hata oldu.';
+      showMessage('Silme hatasi', message);
+    }
+  }
 
   if (loading) {
     return (
@@ -49,7 +200,7 @@ export default function EntryDetailScreen() {
   if (!entry) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Kayıt bulunamadı.</Text>
+        <Text style={styles.errorText}>Kayit bulunamadi.</Text>
       </View>
     );
   }
@@ -62,13 +213,62 @@ export default function EntryDetailScreen() {
     weekday: 'long',
   });
 
-  const icon = entry.isCapsule
-    ? ENTRY_ICONS.capsule
-    : ENTRY_ICONS[entry.type];
+  const icon = entry.isCapsule ? ENTRY_ICONS.capsule : ENTRY_ICONS[entry.type];
+  const hasGallery = entry.photoUrls.length > 1;
+
+  if (editing) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextInput
+            style={styles.editTitle}
+            placeholder="Baslik (opsiyonel)"
+            placeholderTextColor={COLORS.inkLight}
+            value={editTitle}
+            onChangeText={setEditTitle}
+            editable={!saving}
+          />
+          <TextInput
+            style={styles.editBody}
+            placeholder="Anini yaz..."
+            placeholderTextColor={COLORS.inkLight}
+            value={editBody}
+            onChangeText={setEditBody}
+            multiline
+            textAlignVertical="top"
+            editable={!saving}
+          />
+          <View style={styles.editActions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setEditing(false)}
+              disabled={saving}
+            >
+              <Text style={styles.cancelButtonText}>Iptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.disabledButton]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.saveButtonText}>
+                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Üst bilgi */}
       <View style={styles.meta}>
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.authorName}>{entry.authorName}</Text>
@@ -76,24 +276,73 @@ export default function EntryDetailScreen() {
         <Text style={styles.ageLabel}>{entry.yaseminAgeLabel}</Text>
       </View>
 
-      {/* İçerik */}
       <View style={styles.card}>
-        {entry.title && (
-          <Text style={styles.title}>{entry.title}</Text>
+        {entry.photoUrls.length > 0 && (
+          <>
+            {hasGallery ? (
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.galleryRow}
+              >
+                {entry.photoUrls.map((photoUrl, index) => (
+                  <View key={`${photoUrl}-${index}`} style={styles.gallerySlide}>
+                    <Image
+                      source={{ uri: photoUrl }}
+                      style={styles.coverPhoto}
+                      resizeMode="cover"
+                    />
+                    {entry.photoCaptions[index] && (
+                      <Text style={styles.photoCaption}>
+                        {entry.photoCaptions[index]}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View>
+                <Image
+                  source={{ uri: entry.photoUrls[0] }}
+                  style={styles.coverPhoto}
+                  resizeMode="cover"
+                />
+                {entry.photoCaptions[0] && (
+                  <Text style={styles.photoCaption}>{entry.photoCaptions[0]}</Text>
+                )}
+              </View>
+            )}
+
+            {hasGallery && (
+              <Text style={styles.galleryHint}>
+                Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
+              </Text>
+            )}
+          </>
         )}
-        {entry.body && (
-          <Text style={styles.body}>{entry.body}</Text>
-        )}
+        {entry.title && <Text style={styles.title}>{entry.title}</Text>}
+        {entry.body && <Text style={styles.body}>{entry.body}</Text>}
       </View>
 
-      {/* Kapsül bilgisi */}
       {entry.isCapsule && (
         <View style={styles.capsuleInfo}>
           <Text style={styles.capsuleText}>
             {entry.capsuleUnlockAge
-              ? `Bu kapsül Yasemin ${entry.capsuleUnlockAge} yaşına gelince açılacak.`
-              : 'Bu bir zaman kapsülü.'}
+              ? `Bu kapsul Yasemin ${entry.capsuleUnlockAge} yasina gelince acilacak.`
+              : 'Bu bir zaman kapsulu.'}
           </Text>
+        </View>
+      )}
+
+      {isOwner && (
+        <View style={styles.ownerActions}>
+          <TouchableOpacity style={styles.editButton} onPress={startEditing}>
+            <Text style={styles.editButtonText}>Duzenle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteButtonText}>Sil</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -128,18 +377,19 @@ const styles = StyleSheet.create({
   },
   authorName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.uiBold,
     color: COLORS.ink,
   },
   dateText: {
     fontSize: 14,
+    fontFamily: FONTS.ui,
     color: COLORS.inkLight,
     marginTop: SPACING.xs,
   },
   ageLabel: {
     fontSize: 14,
     color: COLORS.gold,
-    fontWeight: '600',
+    fontFamily: FONTS.uiMedium,
     marginTop: SPACING.xs,
   },
   card: {
@@ -148,14 +398,42 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     ...SHADOWS.card,
   },
+  coverPhoto: {
+    width: '100%',
+    height: 240,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.warmWhite,
+  },
+  galleryRow: {
+    gap: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  gallerySlide: {
+    width: 280,
+  },
+  photoCaption: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: COLORS.inkLight,
+    fontFamily: FONTS.body,
+    marginBottom: SPACING.md,
+  },
+  galleryHint: {
+    fontSize: 12,
+    color: COLORS.gold,
+    fontFamily: FONTS.uiMedium,
+    marginBottom: SPACING.sm,
+  },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FONTS.heading,
     color: COLORS.ink,
     marginBottom: SPACING.md,
   },
   body: {
     fontSize: 17,
+    fontFamily: FONTS.body,
     color: COLORS.ink,
     lineHeight: 28,
   },
@@ -170,8 +448,92 @@ const styles = StyleSheet.create({
   },
   capsuleText: {
     fontSize: 14,
+    fontFamily: FONTS.bodyBold,
     color: COLORS.capsule,
     textAlign: 'center',
-    fontWeight: '600',
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.xl,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: COLORS.gold,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: COLORS.warmWhite,
+    fontSize: 15,
+    fontFamily: FONTS.uiBold,
+  },
+  deleteButton: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+  },
+  deleteButtonText: {
+    color: COLORS.danger,
+    fontSize: 15,
+    fontFamily: FONTS.uiMedium,
+  },
+  editTitle: {
+    fontSize: 22,
+    fontFamily: FONTS.heading,
+    color: COLORS.ink,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  editBody: {
+    fontSize: 16,
+    fontFamily: FONTS.body,
+    color: COLORS.ink,
+    lineHeight: 24,
+    minHeight: 200,
+    backgroundColor: COLORS.warmWhite,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.lg,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cancelButtonText: {
+    color: COLORS.inkLight,
+    fontSize: 15,
+    fontFamily: FONTS.uiMedium,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: COLORS.gold,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: COLORS.warmWhite,
+    fontSize: 15,
+    fontFamily: FONTS.uiBold,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });

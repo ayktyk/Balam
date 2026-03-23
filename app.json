@@ -33,7 +33,14 @@
       "backgroundColor": "#F5F0E8"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Balam'in milestone ve ani fotograflarini ekleyebilmesi icin kutuphanene erismesi gerekiyor."
+        }
+      ]
     ]
   }
 }
