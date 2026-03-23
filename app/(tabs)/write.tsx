@@ -227,6 +227,10 @@ export default function WriteScreen() {
     // Mektuplar otomatik gizli, diger turler acik
     setIsPrivate(nextType === 'letter');
 
+    // Sekme degisince icerik alanlarini temizle (sekmeler arasi sizinti onlenir)
+    setTitle('');
+    setBody('');
+
     if (nextType === 'voice') {
       setSelectedPhotos([]);
     }

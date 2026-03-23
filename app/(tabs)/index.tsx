@@ -229,10 +229,17 @@ export default function FeedScreen() {
         orderBy('entryDate', 'desc')
       );
       const snapshot = await getDocs(entriesQuery);
-      const data = snapshot.docs.map((doc) => ({
+      const allData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Entry[];
+
+      // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
+      const data = allData.filter((entry) => {
+        if (!entry.isPrivate) return true;
+        if (isChild) return true;
+        return entry.authorId === user?.uid;
+      });
 
       setEntries(data);
     } catch (error) {
