@@ -192,7 +192,7 @@ export default function FeedScreen() {
     const entriesQuery = query(
       collection(db, 'entries'),
       where('familyId', '==', profile.familyId),
-      orderBy('createdAt', 'desc')
+      orderBy('entryDate', 'desc')
     );
 
     const unsubscribe = onSnapshot(
@@ -241,7 +241,7 @@ export default function FeedScreen() {
       const entriesQuery = query(
         collection(db, 'entries'),
         where('familyId', '==', profile.familyId),
-        orderBy('createdAt', 'desc')
+        orderBy('entryDate', 'desc')
       );
       const snapshot = await getDocs(entriesQuery);
       const allData = snapshot.docs.map((doc) => ({
@@ -277,7 +277,11 @@ export default function FeedScreen() {
     );
   }
 
-  const sortedEntries = sortNewestFirst ? entries : [...entries].reverse();
+  const sortedEntries = [...entries].sort((a, b) => {
+    const aTime = a.createdAt?.toDate?.()?.getTime() ?? 0;
+    const bTime = b.createdAt?.toDate?.()?.getTime() ?? 0;
+    return sortNewestFirst ? bTime - aTime : aTime - bTime;
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.cream }]}>
