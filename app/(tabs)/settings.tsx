@@ -33,7 +33,7 @@ export default function SettingsScreen() {
           setFamilyData(docSnap.data());
         }
       } catch (error) {
-        console.error('Aile verisi yuklenemedi:', error);
+        console.error('Aile verisi yüklenemedi:', error);
       } finally {
         setLoadingFamily(false);
       }
@@ -50,7 +50,7 @@ export default function SettingsScreen() {
       });
       setFamilyData((prev: any) => ({ ...prev, [key]: value }));
     } catch (error) {
-      Alert.alert('Hata', 'Ayarlar guncellenemedi.');
+      Alert.alert('Hata', 'Ayarlar güncellenemedi.');
     } finally {
       setUpdating(false);
     }
@@ -59,9 +59,9 @@ export default function SettingsScreen() {
   function buildHtmlExport(entries: any[], familyName: string) {
     const typeLabels: Record<string, string> = {
       letter: 'Mektup',
-      memory: 'Ani',
-      milestone: 'Adim',
-      voice: 'Ses Kaydi',
+      memory: 'Anı',
+      milestone: 'Adım',
+      voice: 'Ses Kaydı',
     };
 
     const entryCards = entries.map((e) => {
@@ -79,7 +79,7 @@ export default function SettingsScreen() {
         ? `<div style="margin:8px 0;"><audio controls src="${e.voiceUrl}" style="width:100%;"></audio></div>`
         : '';
 
-      const badge = e.isCapsule ? '<span style="background:#8B7355;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Zaman Kapsulu</span> ' : '';
+      const badge = e.isCapsule ? '<span style="background:#8B7355;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Zaman Kapsülü</span> ' : '';
       const privateBadge = e.isPrivate ? '<span style="background:#C9A96E;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Gizli Mektup</span> ' : '';
 
       return `
@@ -117,10 +117,10 @@ export default function SettingsScreen() {
 </head>
 <body>
   <h1>Balam</h1>
-  <div class="subtitle">${familyName} · ${entries.length} ani · ${now} tarihinde olusturuldu</div>
+  <div class="subtitle">${familyName} · ${entries.length} anı · ${now} tarihinde oluşturuldu</div>
   ${entryCards}
   <div style="text-align:center;color:#6B5B45;font-size:12px;padding:32px 0;">
-    Balam ile olusturuldu
+    Balam ile oluşturuldu
   </div>
 </body>
 </html>`;
@@ -171,15 +171,15 @@ export default function SettingsScreen() {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
             mimeType: 'text/html',
-            dialogTitle: 'Balam Ani Arsivi',
+            dialogTitle: 'Balam Anı Arşivi',
           });
         } else {
-          Alert.alert('Hata', 'Paylasim bu cihazda desteklenmiyor.');
+          Alert.alert('Hata', 'Paylaşım bu cihazda desteklenmiyor.');
         }
       }
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Hata', 'Anilar disa aktarilamadi.');
+      Alert.alert('Hata', 'Anılar dışa aktarılamadı.');
     } finally {
       setExporting(false);
     }
@@ -214,7 +214,7 @@ export default function SettingsScreen() {
         </Text>
         <View>
           <Text style={[styles.profileName, { color: colors.ink }]}>
-            {profile?.displayName ?? 'Kullanici'}
+            {profile?.displayName ?? 'Kullanıcı'}
           </Text>
           <Text style={[styles.profileRole, { color: colors.inkLight }]}>{isParent ? 'Ebeveyn' : 'Yasemin'}</Text>
         </View>
@@ -255,14 +255,14 @@ export default function SettingsScreen() {
           {/* Yasemin erisimi */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Yasemin'in Erisimi</Text>
+              <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Yasemin'in Erişimi</Text>
               {updating && <ActivityIndicator size="small" color={colors.gold} />}
             </View>
             <View style={[styles.card, { backgroundColor: colors.creamDark }]}>
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.cardText, { color: colors.ink }]}>Giris Izni</Text>
-                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Yasemin ozel koduyla giris yapabilsin.</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Giriş İzni</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Yasemin özel koduyla giriş yapabilsin.</Text>
                 </View>
                 <Switch
                   value={familyData?.childAccessEnabled ?? false}
@@ -275,8 +275,8 @@ export default function SettingsScreen() {
 
               <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: colors.border + '40' }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.cardText, { color: colors.ink }]}>Goruntuleme Yasi</Text>
-                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Anilari gormeye baslayabilecegi yas.</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Görüntüleme Yaşı</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Anıları görmeye başlayabileceği yaş.</Text>
                 </View>
                 <TextInput
                   style={[styles.ageInput, { backgroundColor: colors.warmWhite, color: colors.ink, borderColor: colors.border }]}
@@ -297,7 +297,7 @@ export default function SettingsScreen() {
                 <View style={styles.settingInfo}>
                   <Text style={[styles.cardText, { color: colors.ink }]}>Aile Kodu</Text>
                   <Text style={[styles.cardHint, { color: colors.inkLight }]}>
-                    Bu kodu esine gonder. Kayit olduktan sonra "Mevcut Aileye Katil" seceneginde bu kodu girerek ayni aileye katilabilir.
+                    Bu kodu eşine gönder. Kayıt olduktan sonra "Mevcut Aileye Katıl" seçeneğinde bu kodu girerek aynı aileye katılabilir.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -306,15 +306,15 @@ export default function SettingsScreen() {
                     if (typeof navigator !== 'undefined' && navigator.clipboard) {
                       navigator.clipboard.writeText(profile.familyId);
                       if (Platform.OS === 'web') {
-                        window.alert('Aile kodu kopyalandi!');
+                        window.alert('Aile kodu kopyalandı!');
                       } else {
-                        Alert.alert('Kopyalandi', 'Aile kodu panoya kopyalandi.');
+                        Alert.alert('Kopyalandı', 'Aile kodu panoya kopyalandı.');
                       }
                     }
                   }}
                 >
                   <Text style={[styles.codeText, { color: colors.ink }]}>{profile.familyId}</Text>
-                  <Text style={[styles.codeCopyHint, { color: colors.inkLight }]}>Kopyalamak icin dokun</Text>
+                  <Text style={[styles.codeCopyHint, { color: colors.inkLight }]}>Kopyalamak için dokun</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -329,9 +329,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.cardText, { color: colors.ink }]}>Tum Anilari Disa Aktar</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Tüm Anıları Dışa Aktar</Text>
                   <Text style={[styles.cardHint, { color: colors.inkLight }]}>
-                    JSON formatinda anilari indir.
+                    HTML formatında anıları indir.
                   </Text>
                 </View>
                 {exporting && <ActivityIndicator size="small" color={colors.gold} />}
@@ -344,8 +344,8 @@ export default function SettingsScreen() {
           <Text style={styles.childModeEmoji}>🧸</Text>
           <Text style={[styles.childModeTitle, { color: colors.ink }]}>Yasemin Modu</Text>
           <Text style={[styles.childModeText, { color: colors.inkLight }]}>
-            Bu modda sadece ailenin senin icin actigi anilari gorebilirsin.
-            Ayarlari degistirmek icin ebeveyn girisine donmelisin.
+            Bu modda sadece ailenin senin için açtığı anıları görebilirsin.
+            Ayarları değiştirmek için ebeveyn girişine dönmelisin.
           </Text>
         </View>
       )}
@@ -357,7 +357,7 @@ export default function SettingsScreen() {
         disabled={signingOut}
       >
         <Text style={[styles.signOutText, { color: colors.danger }]}>
-          {signingOut ? 'Cikis yapiliyor...' : 'Cikis Yap'}
+          {signingOut ? 'Çıkış yapılıyor...' : 'Çıkış Yap'}
         </Text>
       </TouchableOpacity>
     </ScrollView>

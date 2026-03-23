@@ -39,12 +39,12 @@ export default function SetupScreen() {
     const { auth, db } = ensureFirebase();
     const user = auth.currentUser;
     if (!user) {
-      showError('Hata', 'Oturum bulunamadi.');
+      showError('Hata', 'Oturum bulunamadı.');
       return;
     }
 
     if (!displayName.trim()) {
-      showError('Hata', 'Yasemin sana nasil hitap etsin?');
+      showError('Hata', 'Yasemin sana nasıl hitap etsin?');
       return;
     }
 
@@ -80,7 +80,7 @@ export default function SetupScreen() {
       router.replace('/');
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Bir hata olustu.';
+        error instanceof Error ? error.message : 'Bir hata oluştu.';
       showError('Hata', message);
     } finally {
       setLoading(false);
@@ -91,12 +91,12 @@ export default function SetupScreen() {
     const { auth, db } = ensureFirebase();
     const user = auth.currentUser;
     if (!user) {
-      showError('Hata', 'Oturum bulunamadi.');
+      showError('Hata', 'Oturum bulunamadı.');
       return;
     }
 
     if (!displayName.trim()) {
-      showError('Hata', 'Yasemin sana nasil hitap etsin?');
+      showError('Hata', 'Yasemin sana nasıl hitap etsin?');
       return;
     }
 
@@ -110,7 +110,7 @@ export default function SetupScreen() {
       // Aile var mi kontrol et
       const familySnap = await getDoc(doc(db, 'families', familyCode.trim()));
       if (!familySnap.exists()) {
-        showError('Hata', 'Bu kodla bir aile bulunamadi. Kodu kontrol et.');
+        showError('Hata', 'Bu kodla bir aile bulunamadı. Kodu kontrol et.');
         setLoading(false);
         return;
       }
@@ -136,7 +136,7 @@ export default function SetupScreen() {
       router.replace('/');
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Bir hata olustu.';
+        error instanceof Error ? error.message : 'Bir hata oluştu.';
       showError('Hata', message);
     } finally {
       setLoading(false);
@@ -146,16 +146,16 @@ export default function SetupScreen() {
   if (mode === 'choose') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.cream }]}>
-        <Text style={styles.title}>Hos geldin!</Text>
-        <Text style={styles.subtitle}>Nasil devam etmek istersin?</Text>
+        <Text style={styles.title}>Hoş geldin!</Text>
+        <Text style={styles.subtitle}>Nasıl devam etmek istersin?</Text>
 
         <TouchableOpacity
           style={styles.choiceCard}
           onPress={() => setMode('create')}
         >
           <Text style={styles.choiceEmoji}>🌱</Text>
-          <Text style={styles.choiceTitle}>Yeni Aile Olustur</Text>
-          <Text style={styles.choiceHint}>Ilk kez kullaniyorsan buradan basla</Text>
+          <Text style={styles.choiceTitle}>Yeni Aile Oluştur</Text>
+          <Text style={styles.choiceHint}>İlk kez kullanıyorsan buradan başla</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -163,8 +163,8 @@ export default function SetupScreen() {
           onPress={() => setMode('join')}
         >
           <Text style={styles.choiceEmoji}>🤝</Text>
-          <Text style={styles.choiceTitle}>Mevcut Aileye Katil</Text>
-          <Text style={styles.choiceHint}>Esinden aile kodunu al ve katil</Text>
+          <Text style={styles.choiceTitle}>Mevcut Aileye Katıl</Text>
+          <Text style={styles.choiceHint}>Eşinden aile kodunu al ve katıl</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -173,13 +173,13 @@ export default function SetupScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.cream }]}>
       <Text style={styles.title}>
-        {mode === 'create' ? 'Aileyi Kur' : 'Aileye Katil'}
+        {mode === 'create' ? 'Aileyi Kur' : 'Aileye Katıl'}
       </Text>
-      <Text style={styles.subtitle}>Yasemin sana nasil hitap etsin?</Text>
+      <Text style={styles.subtitle}>Yasemin sana nasıl hitap etsin?</Text>
 
       <TextInput
         style={styles.input}
-        placeholder='Orn: "Baban" veya "Annen"'
+        placeholder='Örn: "Baban" veya "Annen"'
         placeholderTextColor={COLORS.inkLight}
         value={displayName}
         onChangeText={setDisplayName}
@@ -198,7 +198,7 @@ export default function SetupScreen() {
         />
       )}
 
-      <Text style={styles.emojiLabel}>Bir avatar sec:</Text>
+      <Text style={styles.emojiLabel}>Bir avatar seç:</Text>
       <View style={styles.emojiRow}>
         {EMOJI_OPTIONS.map((emoji) => (
           <TouchableOpacity
@@ -224,12 +224,12 @@ export default function SetupScreen() {
             ? 'Bekleyin...'
             : mode === 'create'
             ? 'Aileyi Kur'
-            : 'Aileye Katil'}
+            : 'Aileye Katıl'}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => setMode('choose')} disabled={loading}>
-        <Text style={styles.backText}>Geri don</Text>
+        <Text style={styles.backText}>Geri dön</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

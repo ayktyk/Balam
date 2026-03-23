@@ -68,7 +68,7 @@ export default function MilestonesScreen() {
           const message =
             error instanceof Error ? error.message : 'Bilinmeyen hata';
           // eslint-disable-next-line no-console
-          console.log('Milestone yukleme hatasi:', message);
+          console.log('Milestone yükleme hatası:', message);
         }
 
         setLoading(false);
@@ -108,15 +108,15 @@ export default function MilestonesScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.content}>
       <FadeInView style={[styles.heroCard, { backgroundColor: colors.creamDark, borderColor: colors.border }]}>
-        <Text style={[styles.heroEyebrow, { color: colors.gold }]}>Milestone gunlugu</Text>
-        <Text style={[styles.heroTitle, { color: colors.ink }]}>Buyumenin izlerini bir arada tut</Text>
+        <Text style={[styles.heroEyebrow, { color: colors.gold }]}>Milestone günlüğü</Text>
+        <Text style={[styles.heroTitle, { color: colors.ink }]}>Büyümenin izlerini bir arada tut</Text>
         <Text style={[styles.heroText, { color: colors.inkLight }]}>
-          Ilkler, kucuk zaferler ve unutmak istemediginiz anlar burada birikiyor.
+          İlkler, küçük zaferler ve unutmak istemediğiniz anlar burada birikiyor.
         </Text>
         <View style={styles.heroStats}>
           <View style={[styles.statCard, { backgroundColor: colors.warmWhite }]}>
             <Text style={[styles.statValue, { color: colors.ink }]}>{milestones.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.inkLight }]}>Kayitli adim</Text>
+            <Text style={[styles.statLabel, { color: colors.inkLight }]}>Kayıtlı adım</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.warmWhite }]}>
             <Text style={[styles.statValue, { color: colors.ink }]}>{completedTags.size}</Text>
@@ -127,7 +127,7 @@ export default function MilestonesScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Hazir milestone listesi</Text>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Hazır milestone listesi</Text>
           <TouchableOpacity onPress={() => openMilestoneWriter()}>
             <Text style={[styles.sectionAction, { color: colors.gold }]}>Yeni ekle</Text>
           </TouchableOpacity>
@@ -164,7 +164,7 @@ export default function MilestonesScreen() {
                         completed && { color: colors.success },
                       ]}
                     >
-                      {completed ? 'Kayitli' : 'Yaz'}
+                      {completed ? 'Kayıtlı' : 'Yaz'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -179,15 +179,15 @@ export default function MilestonesScreen() {
 
         {milestones.length === 0 ? (
           <FadeInView style={[styles.emptyCard, { backgroundColor: colors.warmWhite, borderColor: colors.border }]} delay={100}>
-            <Text style={[styles.emptyTitle, { color: colors.ink }]}>Henuz milestone yok</Text>
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>Henüz milestone yok</Text>
             <Text style={[styles.emptyText, { color: colors.inkLight }]}>
-              Ilk gulusunu, ilk adimini ya da ilk kelimesini simdi kaydedebilirsin.
+              İlk gülüşünü, ilk adımını ya da ilk kelimesini şimdi kaydedebilirsin.
             </Text>
             <TouchableOpacity
               style={[styles.emptyButton, { backgroundColor: colors.gold }]}
               onPress={() => openMilestoneWriter('first-smile')}
             >
-              <Text style={[styles.emptyButtonText, { color: colors.warmWhite }]}>Ilk milestone'i yaz</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.warmWhite }]}>İlk milestone'i yaz</Text>
             </TouchableOpacity>
           </FadeInView>
         ) : (
@@ -232,7 +232,7 @@ export default function MilestonesScreen() {
                         </Text>
                       )}
                       <Text style={[styles.timelineAuthor, { color: colors.inkLight }]}>
-                        {entry.authorName} tarafindan yazildi
+                        {entry.authorName} tarafından yazıldı
                       </Text>
                     </View>
                   </TouchableOpacity>

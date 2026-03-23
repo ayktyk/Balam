@@ -106,7 +106,7 @@ export default function EntryDetailScreen() {
           const message =
             error instanceof Error ? error.message : 'Bilinmeyen hata';
           // eslint-disable-next-line no-console
-          console.log('Kayit yukleme hatasi:', message);
+          console.log('Kayıt yükleme hatası:', message);
         }
       } finally {
         setLoading(false);
@@ -129,18 +129,18 @@ export default function EntryDetailScreen() {
     if (Platform.OS === 'web') {
       return Promise.resolve(
         window.confirm(
-          'Bu aniyi silmek istediginden emin misin? Bu islem geri alinamaz.'
+          'Bu anıyı silmek istediğinden emin misin? Bu işlem geri alınamaz.'
         )
       );
     }
 
     return new Promise<boolean>((resolve) => {
       Alert.alert(
-        'Aniyi sil',
-        'Bu ani kalici olarak silinecek. Devam etmek istiyor musun?',
+        'Anıyı sil',
+        'Bu anı kalıcı olarak silinecek. Devam etmek istiyor musun?',
         [
           {
-            text: 'Iptal',
+            text: 'İptal',
             style: 'cancel',
             onPress: () => resolve(false),
           },
@@ -175,14 +175,14 @@ export default function EntryDetailScreen() {
 
     if (!isOwner) {
       showMessage(
-        'Yetkisiz islem',
-        'Sadece kendi kaydini duzenleyebilirsin.'
+        'Yetkisiz işlem',
+        'Sadece kendi kaydını düzenleyebilirsin.'
       );
       return;
     }
 
     if (!editBody.trim() && !entry.voiceUrl) {
-      showMessage('Eksik icerik', 'Bir seyler yazmalisin.');
+      showMessage('Eksik içerik', 'Bir şeyler yazmalısın.');
       return;
     }
 
@@ -208,7 +208,7 @@ export default function EntryDetailScreen() {
       setEditing(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bir hata oldu.';
-      showMessage('Kaydetme hatasi', message);
+      showMessage('Kaydetme hatası', message);
     } finally {
       setSaving(false);
     }
@@ -220,7 +220,7 @@ export default function EntryDetailScreen() {
     }
 
     if (!isOwner) {
-      showMessage('Yetkisiz islem', 'Sadece kendi kaydini silebilirsin.');
+      showMessage('Yetkisiz işlem', 'Sadece kendi kaydını silebilirsin.');
       return;
     }
 
@@ -235,7 +235,7 @@ export default function EntryDetailScreen() {
       router.back();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bir hata oldu.';
-      showMessage('Silme hatasi', message);
+      showMessage('Silme hatası', message);
     }
   }
 
@@ -250,7 +250,7 @@ export default function EntryDetailScreen() {
   if (!entry) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Kayit bulunamadi.</Text>
+        <Text style={styles.errorText}>Kayıt bulunamadı.</Text>
       </View>
     );
   }
@@ -281,7 +281,7 @@ export default function EntryDetailScreen() {
         >
           <TextInput
             style={styles.editTitle}
-            placeholder="Baslik (opsiyonel)"
+            placeholder="Başlık (opsiyonel)"
             placeholderTextColor={COLORS.inkLight}
             value={editTitle}
             onChangeText={setEditTitle}
@@ -289,7 +289,7 @@ export default function EntryDetailScreen() {
           />
           <TextInput
             style={styles.editBody}
-            placeholder="Anini yaz..."
+            placeholder="Anını yaz..."
             placeholderTextColor={COLORS.inkLight}
             value={editBody}
             onChangeText={setEditBody}
@@ -383,7 +383,7 @@ export default function EntryDetailScreen() {
                 )}
                 {hasGallery && (
                   <Text style={styles.galleryHint}>
-                    Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
+                    Galeride {entry.photoUrls.length} fotoğraf var. Yana kaydır.
                   </Text>
                 )}
               </>
@@ -441,7 +441,7 @@ export default function EntryDetailScreen() {
                 )}
                 {hasGallery && (
                   <Text style={styles.galleryHint}>
-                    Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
+                    Galeride {entry.photoUrls.length} fotoğraf var. Yana kaydır.
                   </Text>
                 )}
               </>
@@ -460,9 +460,9 @@ export default function EntryDetailScreen() {
           </>
         ) : (
           <View style={styles.lockedState}>
-            <Text style={styles.lockedTitle}>Bu Kapsul Henuz Acilmadi</Text>
+            <Text style={styles.lockedTitle}>Bu Kapsül Henüz Açılmadı</Text>
             <Text style={styles.lockedText}>
-              Ailen senin icin buraya ozel bir ani birakti. {entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yasina geldiginde` : 'Zamani geldiginde'} buradaki surprizi gorebileceksin.
+              Ailen senin için buraya özel bir anı bıraktı. {entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yaşına geldiğinde` : 'Zamanı geldiğinde'} buradaki sürprizi görebileceksin.
             </Text>
           </View>
         )}
@@ -488,10 +488,10 @@ export default function EntryDetailScreen() {
         >
           <Text style={[styles.capsuleText, unlocked && styles.capsuleTextUnlocked]}>
             {unlocked
-              ? 'Bu kapsulun kilidi acildi!'
+              ? 'Bu kapsülün kilidi açıldı!'
               : (entry.capsuleUnlockAge
-                ? `Bu kapsul Yasemin ${entry.capsuleUnlockAge} yasina gelince acilacak.`
-                : 'Bu bir zaman kapsulu.')}
+                ? `Bu kapsül Yasemin ${entry.capsuleUnlockAge} yaşına gelince açılacak.`
+                : 'Bu bir zaman kapsülü.')}
           </Text>
         </Animated.View>
       )}
@@ -499,7 +499,7 @@ export default function EntryDetailScreen() {
       {isOwner && (
         <View style={styles.ownerActions}>
           <TouchableOpacity style={styles.editButton} onPress={startEditing}>
-            <Text style={styles.editButtonText}>Duzenle</Text>
+            <Text style={styles.editButtonText}>Düzenle</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
             <Text style={styles.deleteButtonText}>Sil</Text>

@@ -31,7 +31,7 @@ import { EntryType } from '../../types/entry';
 
 const ENTRY_TYPES: { key: EntryType; label: string; emoji: string }[] = [
   { key: 'letter', label: 'Mektup', emoji: '✉️' },
-  { key: 'memory', label: 'Ani', emoji: '📷' },
+  { key: 'memory', label: 'Anı', emoji: '📷' },
   { key: 'milestone', label: 'Adim', emoji: '🌟' },
   { key: 'voice', label: 'Ses', emoji: '🎙️' },
 ];
@@ -217,8 +217,8 @@ export default function WriteScreen() {
   function handleTypeChange(nextType: EntryType) {
     if (recording && nextType !== type) {
       Alert.alert(
-        'Kayit suruyor',
-        'Tur degistirmeden once mevcut ses kaydini durdur.'
+        'Kayıt sürüyor',
+        'Tür değiştirmeden önce mevcut ses kaydını durdur.'
       );
       return;
     }
@@ -255,7 +255,7 @@ export default function WriteScreen() {
     if (recording) {
       Alert.alert(
         'Kayit suruyor',
-        'Milestone secmeden once mevcut ses kaydini durdur.'
+        'Milestone seçmeden once mevcut ses kaydini durdur.'
       );
       return;
     }
@@ -292,8 +292,8 @@ export default function WriteScreen() {
 
       if (!permission.granted) {
         Alert.alert(
-          'Izin gerekli',
-          'Fotograf eklemek icin galeri izni vermelisin.'
+          'İzin gerekli',
+          'Fotoğraf eklemek için galeri izni vermelisin.'
         );
         return;
       }
@@ -322,8 +322,8 @@ export default function WriteScreen() {
 
     if (!permission.granted) {
       Alert.alert(
-        'Izin gerekli',
-        'Ses kaydetmek icin mikrofon izni vermelisin.'
+        'İzin gerekli',
+        'Ses kaydetmek için mikrofon izni vermelisin.'
       );
       return;
     }
@@ -352,7 +352,7 @@ export default function WriteScreen() {
       await setPlaybackModeAsync();
 
       const message =
-        error instanceof Error ? error.message : 'Ses kaydi baslatilamadi.';
+        error instanceof Error ? error.message : 'Ses kaydı başlatılamadı.';
       Alert.alert('Hata', message);
     }
   }
@@ -371,7 +371,7 @@ export default function WriteScreen() {
       const uri = activeRecording.getURI();
 
       if (!uri) {
-        throw new Error('Kayit dosyasi bulunamadi.');
+        throw new Error('Kayıt dosyası bulunamadı.');
       }
 
       setRecordedVoice({
@@ -385,29 +385,29 @@ export default function WriteScreen() {
       setRecordingDurationMillis(0);
 
       const message =
-        error instanceof Error ? error.message : 'Ses kaydi durdurulamadi.';
+        error instanceof Error ? error.message : 'Ses kaydı durdurulamadı.';
       Alert.alert('Hata', message);
     }
   }
 
   async function handleSave() {
     if (!user || !profile) {
-      Alert.alert('Hata', 'Oturum bulunamadi.');
+      Alert.alert('Hata', 'Oturum bulunamadı.');
       return;
     }
 
     if (recording) {
-      Alert.alert('Hata', 'Kaydetmeden once ses kaydini durdurmalisin.');
+      Alert.alert('Hata', 'Kaydetmeden önce ses kaydını durdurmalısın.');
       return;
     }
 
     if (type !== 'voice' && !body.trim()) {
-      Alert.alert('Hata', 'Bir seyler yazmalisin.');
+      Alert.alert('Hata', 'Bir şeyler yazmalısın.');
       return;
     }
 
     if (type === 'voice' && !recordedVoice) {
-      Alert.alert('Hata', 'Sesli mesaj kaydetmeden bu girisi kaydedemezsin.');
+      Alert.alert('Hata', 'Sesli mesaj kaydetmeden bu girişi kaydedemezsin.');
       return;
     }
 
@@ -418,12 +418,12 @@ export default function WriteScreen() {
         : toStartOfDay(now);
 
     if (type === 'milestone' && !nextEntryDate) {
-      Alert.alert('Hata', 'Milestone tarihi icin GG.AA.YYYY formatini kullan.');
+      Alert.alert('Hata', 'Milestone tarihi için GG.AA.YYYY formatını kullan.');
       return;
     }
 
     if (nextEntryDate && nextEntryDate.getTime() > toStartOfDay(now).getTime()) {
-      Alert.alert('Hata', 'Milestone tarihi bugunden ileri olamaz.');
+      Alert.alert('Hata', 'Milestone tarihi bugünden ileri olamaz.');
       return;
     }
 
@@ -460,7 +460,7 @@ export default function WriteScreen() {
         : null;
 
       const photoCaptionBase = trimmedTitle
-        || (type === 'milestone' ? 'Milestone' : 'Ani');
+        || (type === 'milestone' ? 'Milestone' : 'Anı');
       const photoCaptions = photoUrls.map((_, index) =>
         photoUrls.length === 1 ? photoCaptionBase : `${photoCaptionBase} ${index + 1}`
       );
@@ -489,7 +489,7 @@ export default function WriteScreen() {
         updatedAt: entryDate,
       });
 
-      Alert.alert('Kaydedildi', 'Kayit Yasemin icin saklandi.', [
+      Alert.alert('Kaydedildi', 'Kayıt Yasemin için saklandı.', [
         { text: 'Tamam', onPress: () => router.back() },
       ]);
 
@@ -506,7 +506,7 @@ export default function WriteScreen() {
       setType('letter');
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Bir hata olustu.';
+        error instanceof Error ? error.message : 'Bir hata oluştu.';
       Alert.alert('Hata', message);
     } finally {
       setSaving(false);
@@ -514,11 +514,11 @@ export default function WriteScreen() {
   }
 
   const photoCardTitle =
-    type === 'milestone' ? 'Milestone fotograflari' : 'Fotograflar';
+    type === 'milestone' ? 'Milestone fotoğrafları' : 'Fotoğraflar';
   const photoCardHint =
     type === 'milestone'
-      ? 'Timeline kartinda ilk fotograf gorunur, detay ekraninda tumu galeride listelenir.'
-      : 'Feed kartinda ilk fotograf gorunur, detay ekraninda tumu galeride listelenir.';
+      ? 'Timeline kartında ilk fotoğraf görünür, detay ekranında tümü galeride listelenir.'
+      : 'Feed kartında ilk fotoğraf görünür, detay ekranında tümü galeride listelenir.';
 
   return (
     <KeyboardAvoidingView
@@ -556,9 +556,9 @@ export default function WriteScreen() {
 
         {type === 'milestone' && (
           <View style={styles.milestoneSection}>
-            <Text style={styles.sectionTitle}>Milestone sec</Text>
+            <Text style={styles.sectionTitle}>Milestone seç</Text>
             <Text style={styles.sectionHint}>
-              Hazir basliklardan birini sec ya da kendi basligini yaz.
+              Hazır başlıklardan birini seç ya da kendi başlığını yaz.
             </Text>
 
             <View style={styles.milestoneGrid}>
@@ -589,7 +589,7 @@ export default function WriteScreen() {
 
             {selectedMilestonePreset && (
               <View style={styles.milestonePromptCard}>
-                <Text style={styles.milestonePromptTitle}>Yazi fikri</Text>
+                <Text style={styles.milestonePromptTitle}>Yazı fikri</Text>
                 <Text style={styles.milestonePromptText}>
                   {selectedMilestonePreset.prompt}
                 </Text>
@@ -599,7 +599,7 @@ export default function WriteScreen() {
             <View style={styles.dateCard}>
               <Text style={styles.dateTitle}>Milestone tarihi</Text>
               <Text style={styles.dateHint}>
-                GG.AA.YYYY formatinda gir. Yas etiketi bu tarihe gore hesaplanir.
+                GG.AA.YYYY formatında gir. Yaş etiketi bu tarihe göre hesaplanır.
               </Text>
               <TextInput
                 style={styles.dateInput}
@@ -615,7 +615,7 @@ export default function WriteScreen() {
                   style={styles.dateShortcut}
                   onPress={() => setMilestoneDateInput(formatDateInput(new Date()))}
                 >
-                  <Text style={styles.dateShortcutText}>Bugun</Text>
+                  <Text style={styles.dateShortcutText}>Bugün</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.dateShortcut}
@@ -632,7 +632,7 @@ export default function WriteScreen() {
                     );
                   }}
                 >
-                  <Text style={styles.dateShortcutText}>Dun</Text>
+                  <Text style={styles.dateShortcutText}>Dün</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -643,10 +643,10 @@ export default function WriteScreen() {
           <View style={styles.voiceCard}>
             <View style={styles.voiceHeader}>
               <View style={styles.voiceCopy}>
-                <Text style={styles.dateTitle}>Ses kaydi</Text>
+                <Text style={styles.dateTitle}>Ses kaydı</Text>
                 <Text style={styles.dateHint}>
-                  Yasemin icin kisa bir sesli mesaj birak. Kayittan sonra
-                  istersen kisa bir not da ekleyebilirsin.
+                  Yasemin için kısa bir sesli mesaj bırak. Kayıttan sonra
+                  istersen kısa bir not da ekleyebilirsin.
                 </Text>
               </View>
 
@@ -663,10 +663,10 @@ export default function WriteScreen() {
                   ]}
                 >
                   {recording
-                    ? `Kayit ${formatAudioDuration(recordingDurationMillis)}`
+                    ? `Kayıt ${formatAudioDuration(recordingDurationMillis)}`
                     : recordedVoice
-                      ? `Hazir ${formatAudioDuration(recordedVoice.durationMillis)}`
-                      : 'Hazir degil'}
+                      ? `Hazır ${formatAudioDuration(recordedVoice.durationMillis)}`
+                      : 'Hazır değil'}
                 </Text>
               </View>
             </View>
@@ -681,10 +681,10 @@ export default function WriteScreen() {
             >
               <Text style={styles.voiceRecordButtonText}>
                 {recording
-                  ? 'Kaydi durdur'
+                  ? 'Kaydı durdur'
                   : recordedVoice
                     ? 'Tekrar kaydet'
-                    : 'Kayda basla'}
+                    : 'Kayda başla'}
               </Text>
             </TouchableOpacity>
 
@@ -699,7 +699,7 @@ export default function WriteScreen() {
                   onPress={removeRecordedVoice}
                   disabled={saving}
                 >
-                  <Text style={styles.removeVoiceText}>Kaydi sil</Text>
+                  <Text style={styles.removeVoiceText}>Kaydı sil</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -717,7 +717,7 @@ export default function WriteScreen() {
                 disabled={saving}
               >
                 <Text style={styles.photoButtonText}>
-                  {selectedPhotos.length > 0 ? 'Fotolari degistir' : 'Foto sec'}
+                  {selectedPhotos.length > 0 ? 'Fotoları değiştir' : 'Foto seç'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -740,7 +740,7 @@ export default function WriteScreen() {
                       onPress={() => removeSelectedPhoto(photo.id)}
                       disabled={saving}
                     >
-                      <Text style={styles.removePhotoText}>Kaldir</Text>
+                      <Text style={styles.removePhotoText}>Kaldır</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -753,12 +753,12 @@ export default function WriteScreen() {
           style={styles.titleInput}
           placeholder={
             type === 'letter'
-              ? 'Canim Yasemin...'
+              ? 'Canım Yasemin...'
               : type === 'milestone'
-                ? 'Ilk adim'
+                ? 'İlk adım'
                 : type === 'voice'
-                  ? 'Sesli mesaj basligi (opsiyonel)'
-                  : 'Baslik (opsiyonel)'
+                  ? 'Sesli mesaj başlığı (opsiyonel)'
+                  : 'Başlık (opsiyonel)'
           }
           placeholderTextColor={COLORS.inkLight}
           value={title}
@@ -770,7 +770,7 @@ export default function WriteScreen() {
           style={styles.bodyInput}
           placeholder={
             type === 'voice'
-              ? 'Istersen sesli mesajina kisa bir not ekleyebilirsin.'
+              ? 'İstersen sesli mesajına kısa bir not ekleyebilirsin.'
               : "Yasemin'e ne anlatmak istersin?"
           }
           placeholderTextColor={COLORS.inkLight}
@@ -786,10 +786,10 @@ export default function WriteScreen() {
             <Text style={styles.privateBannerEmoji}>🔒</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.privateBannerTitle}>Gizli mektup</Text>
-              <Text style={styles.privateBannerText}>Bu mektubu sadece sen ve Yasemin gorebilecek.</Text>
+              <Text style={styles.privateBannerText}>Bu mektubu sadece sen ve Yasemin görebilecek.</Text>
             </View>
             <TouchableOpacity onPress={() => setIsPrivate(false)}>
-              <Text style={styles.privateBannerToggle}>Acik yap</Text>
+              <Text style={styles.privateBannerToggle}>Açık yap</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -803,7 +803,7 @@ export default function WriteScreen() {
         <View style={styles.capsuleRow}>
           <View style={styles.capsuleInfo}>
             <Text style={styles.capsuleEmoji}>📮</Text>
-            <Text style={styles.capsuleLabel}>Zaman kapsulu</Text>
+            <Text style={styles.capsuleLabel}>Zaman kapsülü</Text>
           </View>
           <Switch
             value={isCapsule}
@@ -816,7 +816,7 @@ export default function WriteScreen() {
         {isCapsule && (
           <View style={styles.capsuleOptions}>
             <Text style={styles.capsuleHint}>
-              Yasemin kac yasinda okuyabilsin?
+              Yasemin kaç yaşında okuyabilsin?
             </Text>
             <TextInput
               style={styles.ageInput}
@@ -842,7 +842,7 @@ export default function WriteScreen() {
             {saving
               ? 'Kaydediliyor...'
               : recording
-                ? 'Once kaydi durdur'
+                ? 'Önce kaydı durdur'
                 : 'Kaydet'}
           </Text>
         </TouchableOpacity>

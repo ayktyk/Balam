@@ -42,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: isParent ? 'Anilar' : 'Senin Icin',
+          title: isParent ? 'Anılar' : 'Senin İçin',
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji={isParent ? "✉️" : "🎁"} focused={focused} />
           ),
@@ -61,7 +61,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="milestones"
         options={{
-          title: 'Adimlar',
+          title: 'Adımlar',
           href: isParent ? '/milestones' : null, // Çocuk modunda gizle
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🌟" focused={focused} />

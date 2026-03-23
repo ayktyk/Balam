@@ -125,10 +125,10 @@ function EmptyFeedState() {
         </View>
       </View>
 
-      <Text style={styles.emptyTitle}>Ilk ani icin yer hazir</Text>
+      <Text style={styles.emptyTitle}>İlk anı için yer hazır</Text>
       <Text style={styles.emptyText}>
-        Yasemin'in bugununden bir parca yaz, gelecekte donup okuyabileceginiz
-        sicak bir aile arsivi olussun.
+        Yasemin'in bugününden bir parça yaz, gelecekte dönüp okuyabileceğiniz
+        sıcak bir aile arşivi oluşsun.
       </Text>
 
       <TouchableOpacity
@@ -136,7 +136,7 @@ function EmptyFeedState() {
         onPress={() => router.push('/(tabs)/write')}
         activeOpacity={0.85}
       >
-        <Text style={styles.emptyButtonText}>Ilk mektubu yaz</Text>
+        <Text style={styles.emptyButtonText}>İlk mektubu yaz</Text>
       </TouchableOpacity>
 
       <View style={styles.emptyHints}>
@@ -144,7 +144,7 @@ function EmptyFeedState() {
           <Text style={styles.emptyHintText}>Mektup</Text>
         </View>
         <View style={styles.emptyHintPill}>
-          <Text style={styles.emptyHintText}>Ani</Text>
+          <Text style={styles.emptyHintText}>Anı</Text>
         </View>
         <View style={styles.emptyHintPill}>
           <Text style={styles.emptyHintText}>Milestone</Text>
@@ -257,7 +257,7 @@ export default function FeedScreen() {
   if (loading) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.cream }]}>
-        <Text style={[styles.emptyText, { color: colors.inkLight }]}>Yukleniyor...</Text>
+        <Text style={[styles.emptyText, { color: colors.inkLight }]}>Yükleniyor...</Text>
       </View>
     );
   }

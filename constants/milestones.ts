@@ -7,33 +7,33 @@ export interface MilestonePreset {
 export const MILESTONE_PRESETS: MilestonePreset[] = [
   {
     id: 'first-smile',
-    title: 'Ilk gulus',
-    prompt: 'O ani, ortami ve sizin ne hissettiginizi yaz.',
+    title: 'İlk gülüş',
+    prompt: 'O anı, ortamı ve sizin ne hissettiğinizi yaz.',
   },
   {
     id: 'first-word',
-    title: 'Ilk kelime',
+    title: 'İlk kelime',
     prompt: 'Hangi kelimeydi ve ilk kim duydu?',
   },
   {
     id: 'first-step',
-    title: 'Ilk adim',
-    prompt: 'Ne zaman denedi, nasil basardi, neler yasandi?',
+    title: 'İlk adım',
+    prompt: 'Ne zaman denedi, nasıl başardı, neler yaşandı?',
   },
   {
     id: 'first-tooth',
-    title: 'Ilk dis',
-    prompt: 'Ne fark ettiniz, nasil sevindiniz, o gun nasil gecti?',
+    title: 'İlk diş',
+    prompt: 'Ne fark ettiniz, nasıl sevindiniz, o gün nasıl geçti?',
   },
   {
     id: 'first-laugh',
-    title: 'Ilk kahkaha',
-    prompt: 'Onu ne guldurdu ve siz o anda ne yaptiniz?',
+    title: 'İlk kahkaha',
+    prompt: 'Onu ne güldürdü ve siz o anda ne yaptınız?',
   },
   {
     id: 'first-birthday',
-    title: 'Ilk dogum gunu',
-    prompt: 'Kutlamayi, gelenleri ve o gunun havasini not et.',
+    title: 'İlk doğum günü',
+    prompt: 'Kutlamayı, gelenleri ve o günün havasını not et.',
   },
 ];
 

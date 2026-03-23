@@ -37,7 +37,7 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
-      showError('Hata', 'E-posta ve sifre gerekli.');
+      showError('Hata', 'E-posta ve şifre gerekli.');
       return;
     }
 
@@ -52,7 +52,7 @@ export default function LoginScreen() {
       }
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Bir hata olustu.';
+        error instanceof Error ? error.message : 'Bir hata oluştu.';
       showError('Hata', message);
     } finally {
       setLoading(false);
@@ -82,25 +82,25 @@ export default function LoginScreen() {
             </View>
 
             <Text style={styles.title}>Balam</Text>
-            <Text style={styles.subtitle}>Yasemin icin zaman kapsulu</Text>
+            <Text style={styles.subtitle}>Yasemin için zaman kapsülü</Text>
 
             <View style={styles.promiseRow}>
               <View style={styles.promisePill}>
                 <Text style={styles.promisePillText}>Mektuplar</Text>
               </View>
               <View style={styles.promisePill}>
-                <Text style={styles.promisePillText}>Anilar</Text>
+                <Text style={styles.promisePillText}>Anılar</Text>
               </View>
               <View style={styles.promisePill}>
-                <Text style={styles.promisePillText}>Ilkler</Text>
+                <Text style={styles.promisePillText}>İlkler</Text>
               </View>
             </View>
 
             <View style={styles.noteCard}>
-              <Text style={styles.noteEyebrow}>Aile arsivi</Text>
+              <Text style={styles.noteEyebrow}>Aile arşivi</Text>
               <Text style={styles.noteText}>
-                Bugunun duygusunu, ilk gulusunu ve gelecege birakmak istedigin her
-                seyi tek yerde tut.
+                Bugünün duygusunu, ilk gülüşünü ve geleceğe bırakmak istediğin her
+                şeyi tek yerde tut.
               </Text>
             </View>
           </View>
@@ -119,7 +119,7 @@ export default function LoginScreen() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Sifre"
+            placeholder="Şifre"
             placeholderTextColor={COLORS.inkLight}
             value={password}
             onChangeText={setPassword}
@@ -133,7 +133,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Bekleyin...' : isRegister ? 'Kayit Ol' : 'Giris Yap'}
+              {loading ? 'Bekleyin...' : isRegister ? 'Kayıt Ol' : 'Giriş Yap'}
             </Text>
           </TouchableOpacity>
 
@@ -143,8 +143,8 @@ export default function LoginScreen() {
           >
             <Text style={styles.switchText}>
               {isRegister
-                ? 'Zaten hesabin var mi? Giris yap'
-                : 'Hesabin yok mu? Kayit ol'}
+                ? 'Zaten hesabın var mı? Giriş yap'
+                : 'Hesabın yok mu? Kayıt ol'}
             </Text>
           </TouchableOpacity>
 
