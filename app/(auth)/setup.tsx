@@ -6,15 +6,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { doc, setDoc, collection, Timestamp } from 'firebase/firestore';
 import { hash } from 'bcryptjs';
-import { auth, db } from '../../lib/firebase';
+import { ensureFirebase } from '../../lib/firebase';
 import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
 
 const EMOJI_OPTIONS = ['🌿', '🌸', '🦋', '🌙', '⭐', '🌊', '🍂', '🌻'];
 const DEFAULT_CHILD_CODE = '2026';
+
+function showError(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
 
 export default function SetupScreen() {
   const [displayName, setDisplayName] = useState('');
@@ -22,20 +31,20 @@ export default function SetupScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSetup() {
+    const { auth, db } = ensureFirebase();
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Hata', 'Oturum bulunamadı.');
+      showError('Hata', 'Oturum bulunamadi.');
       return;
     }
 
     if (!displayName.trim()) {
-      Alert.alert('Hata', 'Yasemin sana nasıl hitap etsin?');
+      showError('Hata', 'Yasemin sana nasil hitap etsin?');
       return;
     }
 
     setLoading(true);
     try {
-      // Aile oluştur
       const familyRef = doc(collection(db, 'families'));
       const codeHash = await hash(DEFAULT_CHILD_CODE, 10);
 
@@ -47,7 +56,6 @@ export default function SetupScreen() {
         createdAt: Timestamp.now(),
       });
 
-      // Aile üyesi ekle
       await setDoc(doc(db, 'families', familyRef.id, 'members', user.uid), {
         displayName: displayName.trim(),
         role: 'parent',
@@ -56,7 +64,6 @@ export default function SetupScreen() {
         createdAt: Timestamp.now(),
       });
 
-      // Kullanıcı profili oluştur
       await setDoc(doc(db, 'users', user.uid), {
         displayName: displayName.trim(),
         role: 'parent',
@@ -68,8 +75,8 @@ export default function SetupScreen() {
       router.replace('/');
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Bir hata oluştu.';
-      Alert.alert('Hata', message);
+        error instanceof Error ? error.message : 'Bir hata olustu.';
+      showError('Hata', message);
     } finally {
       setLoading(false);
     }

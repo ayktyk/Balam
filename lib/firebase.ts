@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -12,43 +12,32 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-function getFirebaseApp(): FirebaseApp {
-  if (getApps().length > 0) return getApp();
-  return initializeApp(firebaseConfig);
+let _db: Firestore;
+let _storage: FirebaseStorage;
+let _auth: Auth;
+let _initialized = false;
+
+function init() {
+  if (_initialized) return;
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  _db = getFirestore(app);
+  _storage = getStorage(app);
+  _auth = getAuth(app);
+  _storage.maxUploadRetryTime = 10000;
+  _storage.maxOperationRetryTime = 10000;
+  _initialized = true;
 }
 
-// Lazy initialization — build sirasinda calistirilmaz
-let _db: ReturnType<typeof getFirestore>;
-let _storage: ReturnType<typeof getStorage>;
-let _auth: Auth;
-
 export function ensureFirebase() {
-  if (!_db) {
-    const app = getFirebaseApp();
-    _db = getFirestore(app);
-    _storage = getStorage(app);
-    _auth = getAuth(app);
-    _storage.maxUploadRetryTime = 10000;
-    _storage.maxOperationRetryTime = 10000;
-  }
+  init();
   return { db: _db, storage: _storage, auth: _auth };
 }
 
-// Proxy exports — ilk erisimde initialize edilir
-export const db = new Proxy({} as ReturnType<typeof getFirestore>, {
-  get(_, prop) {
-    return (ensureFirebase().db as any)[prop];
-  },
-});
+// Runtime'da hemen initialize et, SSR'da (typeof window === 'undefined') atlat
+if (typeof window !== 'undefined') {
+  init();
+}
 
-export const storage = new Proxy({} as ReturnType<typeof getStorage>, {
-  get(_, prop) {
-    return (ensureFirebase().storage as any)[prop];
-  },
-});
-
-export const auth = new Proxy({} as Auth, {
-  get(_, prop) {
-    return (ensureFirebase().auth as any)[prop];
-  },
-});
+// Bu export'lar runtime'da (tarayici) hep dolu olacak.
+// SSR build sirasinda kullanilmazlar — sadece import olarak referans alinirlar.
+export { _db as db, _storage as storage, _auth as auth };
