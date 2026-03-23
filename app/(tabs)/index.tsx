@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import {
   collection,
@@ -160,10 +161,24 @@ export default function FeedScreen() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
   // Yasemin (çocuk) girişi yapıldığında isParent false olur.
   const isParent = profile?.role !== 'child';
   const isChild = profile?.role === 'child';
+
+  // Sıralama tercihini AsyncStorage'dan yükle
+  useEffect(() => {
+    AsyncStorage.getItem('balam_sort_order').then((val) => {
+      if (val === 'oldest') setSortNewestFirst(false);
+    });
+  }, []);
+
+  function toggleSort() {
+    const next = !sortNewestFirst;
+    setSortNewestFirst(next);
+    AsyncStorage.setItem('balam_sort_order', next ? 'newest' : 'oldest');
+  }
 
   useEffect(() => {
     if (!profile?.familyId) {
@@ -177,7 +192,7 @@ export default function FeedScreen() {
     const entriesQuery = query(
       collection(db, 'entries'),
       where('familyId', '==', profile.familyId),
-      orderBy('entryDate', 'desc')
+      orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(
@@ -226,7 +241,7 @@ export default function FeedScreen() {
       const entriesQuery = query(
         collection(db, 'entries'),
         where('familyId', '==', profile.familyId),
-        orderBy('entryDate', 'desc')
+        orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(entriesQuery);
       const allData = snapshot.docs.map((doc) => ({
@@ -262,10 +277,23 @@ export default function FeedScreen() {
     );
   }
 
+  const sortedEntries = sortNewestFirst ? entries : [...entries].reverse();
+
   return (
     <View style={[styles.container, { backgroundColor: colors.cream }]}>
+      {entries.length > 0 && (
+        <TouchableOpacity
+          style={[styles.sortButton, { backgroundColor: colors.creamDark, borderColor: colors.border }]}
+          onPress={toggleSort}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.sortButtonText, { color: colors.inkLight }]}>
+            {sortNewestFirst ? '⬇ En yeni önce' : '⬆ En eski önce'}
+          </Text>
+        </TouchableOpacity>
+      )}
       <FlatList
-        data={entries}
+        data={sortedEntries}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <EntryCard entry={item} index={index} isParent={isParent} colors={colors} />
@@ -291,6 +319,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.cream,
+  },
+  sortButton: {
+    alignSelf: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: -SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontFamily: FONTS.uiMedium,
   },
   list: {
     padding: SPACING.md,
