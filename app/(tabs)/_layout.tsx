@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../../hooks/useAuth';
 import { COLORS, FONTS } from '../../constants/theme';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -18,25 +19,32 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const { profile } = useAuth();
+  const isParent = profile?.role !== 'child';
+  
+  // Çocuk modunda daha sıcak bir renk teması (krem yerine altın/sarı tonları)
+  const childBg = '#FFF9EB';
+  const bgColor = isParent ? COLORS.cream : childBg;
+
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { backgroundColor: bgColor }],
         tabBarItemStyle: styles.tabBarItem,
         tabBarActiveTintColor: COLORS.ink,
         tabBarInactiveTintColor: COLORS.inkLight,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIconStyle: styles.tabBarIcon,
-        headerStyle: { backgroundColor: COLORS.cream },
+        headerStyle: { backgroundColor: bgColor },
         headerTintColor: COLORS.ink,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Anilar',
+          title: isParent ? 'Anilar' : 'Senin Icin',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="✉️" focused={focused} />
+            <TabIcon emoji={isParent ? "✉️" : "🎁"} focused={focused} />
           ),
         }}
       />
@@ -44,6 +52,7 @@ export default function TabsLayout() {
         name="write"
         options={{
           title: 'Yaz',
+          href: isParent ? '/write' : null, // Çocuk modunda gizle
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🖊️" focused={focused} />
           ),
@@ -53,6 +62,7 @@ export default function TabsLayout() {
         name="milestones"
         options={{
           title: 'Adimlar',
+          href: isParent ? '/milestones' : null, // Çocuk modunda gizle
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🌟" focused={focused} />
           ),
@@ -61,9 +71,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Ayarlar',
+          title: isParent ? 'Ayarlar' : 'Profil',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="⚙️" focused={focused} />
+            <TabIcon emoji={isParent ? "⚙️" : "🧸"} focused={focused} />
           ),
         }}
       />

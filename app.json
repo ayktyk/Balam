@@ -36,11 +36,18 @@
       "expo-router",
       "expo-font",
       [
+        "expo-av",
+        {
+          "microphonePermission": "Balam'in Yasemin icin sesli mesaj kaydedebilmesi icin mikrofon erisimi gerekiyor."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Balam'in milestone ve ani fotograflarini ekleyebilmesi icin kutuphanene erismesi gerekiyor."
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

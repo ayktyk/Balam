@@ -24,11 +24,14 @@ import {
   SHADOWS,
   SPACING,
 } from '../../constants/theme';
+import { AudioPlayer } from '../../components/AudioPlayer';
 import { Entry } from '../../types/entry';
+
+import { isCapsuleUnlocked } from '../../constants/yasemin';
 
 export default function EntryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [entry, setEntry] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -37,6 +40,7 @@ export default function EntryDetailScreen() {
   const [editBody, setEditBody] = useState('');
 
   const isOwner = Boolean(user && entry && user.uid === entry.authorId);
+  const isParent = profile?.role !== 'child';
 
   useEffect(() => {
     async function fetchEntry() {
@@ -131,7 +135,7 @@ export default function EntryDetailScreen() {
       return;
     }
 
-    if (!editBody.trim()) {
+    if (!editBody.trim() && !entry.voiceUrl) {
       showMessage('Eksik icerik', 'Bir seyler yazmalisin.');
       return;
     }
@@ -141,7 +145,7 @@ export default function EntryDetailScreen() {
     try {
       const updatedAt = Timestamp.now();
       const nextTitle = editTitle.trim() || null;
-      const nextBody = editBody.trim();
+      const nextBody = editBody.trim() || null;
 
       await updateDoc(doc(db, 'entries', id), {
         title: nextTitle,
@@ -213,7 +217,10 @@ export default function EntryDetailScreen() {
     weekday: 'long',
   });
 
-  const icon = entry.isCapsule ? ENTRY_ICONS.capsule : ENTRY_ICONS[entry.type];
+  const unlocked = !entry.isCapsule || isCapsuleUnlocked(entry.capsuleUnlockDate?.toDate(), entry.capsuleUnlockAge);
+  const canSeeContent = isParent || unlocked;
+
+  const icon = entry.isCapsule ? (unlocked ? '🔓' : '🔒') : ENTRY_ICONS[entry.type];
   const hasGallery = entry.photoUrls.length > 1;
 
   if (editing) {
@@ -276,8 +283,8 @@ export default function EntryDetailScreen() {
         <Text style={styles.ageLabel}>{entry.yaseminAgeLabel}</Text>
       </View>
 
-      <View style={styles.card}>
-        {entry.photoUrls.length > 0 && (
+      <View style={[styles.card, entry.isCapsule && !unlocked && styles.cardLocked]}>
+        {entry.photoUrls.length > 0 && canSeeContent && (
           <>
             {hasGallery ? (
               <ScrollView
@@ -321,16 +328,39 @@ export default function EntryDetailScreen() {
             )}
           </>
         )}
-        {entry.title && <Text style={styles.title}>{entry.title}</Text>}
-        {entry.body && <Text style={styles.body}>{entry.body}</Text>}
+        {entry.voiceUrl && canSeeContent && (
+          <View style={styles.voiceSection}>
+            <Text style={styles.voiceLabel}>Sesli mesaj</Text>
+            <AudioPlayer
+              uri={entry.voiceUrl}
+              durationMillis={entry.voiceDurationMillis ?? null}
+            />
+          </View>
+        )}
+
+        {canSeeContent ? (
+          <>
+            {entry.title && <Text style={styles.title}>{entry.title}</Text>}
+            {entry.body && <Text style={styles.body}>{entry.body}</Text>}
+          </>
+        ) : (
+          <View style={styles.lockedState}>
+            <Text style={styles.lockedTitle}>Bu Kapsül Henüz Açılmadı</Text>
+            <Text style={styles.lockedText}>
+              Ailen senin için buraya özel bir anı bıraktı. {entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yaşına geldiğinde` : 'Zamanı geldiğinde'} buradaki sürprizi görebileceksin. 🌸
+            </Text>
+          </View>
+        )}
       </View>
 
       {entry.isCapsule && (
-        <View style={styles.capsuleInfo}>
-          <Text style={styles.capsuleText}>
-            {entry.capsuleUnlockAge
-              ? `Bu kapsul Yasemin ${entry.capsuleUnlockAge} yasina gelince acilacak.`
-              : 'Bu bir zaman kapsulu.'}
+        <View style={[styles.capsuleInfo, unlocked && styles.capsuleInfoUnlocked]}>
+          <Text style={[styles.capsuleText, unlocked && styles.capsuleTextUnlocked]}>
+            {unlocked 
+              ? '✨ Bu kapsülün kilidi açıldı!' 
+              : (entry.capsuleUnlockAge
+                ? `Bu kapsul Yasemin ${entry.capsuleUnlockAge} yasina gelince acilacak.`
+                : 'Bu bir zaman kapsulu.')}
           </Text>
         </View>
       )}
@@ -398,6 +428,30 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     ...SHADOWS.card,
   },
+  cardLocked: {
+    backgroundColor: '#F3EFE7',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: COLORS.capsule,
+  },
+  lockedState: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
+    gap: SPACING.md,
+  },
+  lockedTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.heading,
+    color: COLORS.capsule,
+    textAlign: 'center',
+  },
+  lockedText: {
+    fontSize: 15,
+    fontFamily: FONTS.body,
+    color: COLORS.inkLight,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   coverPhoto: {
     width: '100%',
     height: 240,
@@ -425,6 +479,17 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.uiMedium,
     marginBottom: SPACING.sm,
   },
+  voiceSection: {
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  voiceLabel: {
+    fontSize: 13,
+    color: COLORS.gold,
+    fontFamily: FONTS.uiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
   title: {
     fontSize: 24,
     fontFamily: FONTS.heading,
@@ -446,11 +511,19 @@ const styles = StyleSheet.create({
     borderColor: COLORS.capsule,
     borderStyle: 'dashed',
   },
+  capsuleInfoUnlocked: {
+    backgroundColor: '#E8F5E8',
+    borderColor: COLORS.success,
+    borderStyle: 'solid',
+  },
   capsuleText: {
     fontSize: 14,
     fontFamily: FONTS.bodyBold,
     color: COLORS.capsule,
     textAlign: 'center',
+  },
+  capsuleTextUnlocked: {
+    color: COLORS.success,
   },
   ownerActions: {
     flexDirection: 'row',

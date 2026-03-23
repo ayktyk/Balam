@@ -27,10 +27,13 @@ import {
   SHADOWS,
   SPACING,
 } from '../../constants/theme';
+import { AudioPlayer } from '../../components/AudioPlayer';
 import { FadeInView } from '../../components/FadeInView';
 import { Entry } from '../../types/entry';
 
-function EntryCard({ entry, index }: { entry: Entry; index: number }) {
+import { isCapsuleUnlocked } from '../../constants/yasemin';
+
+function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: number; isParent?: boolean }) {
   const entryDate = entry.entryDate.toDate();
   const dateStr = entryDate.toLocaleDateString('tr-TR', {
     day: 'numeric',
@@ -39,13 +42,20 @@ function EntryCard({ entry, index }: { entry: Entry; index: number }) {
     weekday: 'long',
   });
 
-  const icon = entry.isCapsule ? ENTRY_ICONS.capsule : ENTRY_ICONS[entry.type];
+  const unlocked = !entry.isCapsule || isCapsuleUnlocked(entry.capsuleUnlockDate?.toDate(), entry.capsuleUnlockAge);
+  const canSeeContent = isParent || unlocked;
+
+  const icon = entry.isCapsule ? (unlocked ? '🔓' : '🔒') : ENTRY_ICONS[entry.type];
   const coverPhoto = entry.photoUrls[0];
 
   return (
     <FadeInView delay={Math.min(index * 70, 280)}>
       <TouchableOpacity
-        style={[styles.card, entry.isCapsule && styles.capsuleCard]}
+        style={[
+          styles.card, 
+          entry.isCapsule && styles.capsuleCard,
+          entry.isCapsule && !unlocked && styles.capsuleCardLocked
+        ]}
         onPress={() => router.push(`/entry/${entry.id}`)}
         activeOpacity={0.7}
       >
@@ -59,7 +69,7 @@ function EntryCard({ entry, index }: { entry: Entry; index: number }) {
           </View>
         </View>
 
-        {coverPhoto && (
+        {coverPhoto && canSeeContent && (
           <Image
             source={{ uri: coverPhoto }}
             style={styles.cardPhoto}
@@ -67,20 +77,28 @@ function EntryCard({ entry, index }: { entry: Entry; index: number }) {
           />
         )}
 
-        {entry.title && <Text style={styles.entryTitle}>{entry.title}</Text>}
-
-        {entry.body && (
-          <Text style={styles.entryBody} numberOfLines={3}>
-            {entry.isCapsule ? '🔒 Bu kapsul henuz acilmadi...' : entry.body}
-          </Text>
+        {entry.voiceUrl && !entry.isCapsule && canSeeContent && (
+          <View style={styles.audioWrap}>
+            <AudioPlayer
+              uri={entry.voiceUrl}
+              durationMillis={entry.voiceDurationMillis ?? null}
+              compact
+            />
+          </View>
         )}
 
+        {entry.title && <Text style={styles.entryTitle}>{entry.title}</Text>}
+
+        <Text style={styles.entryBody} numberOfLines={3}>
+          {canSeeContent ? entry.body : 'Bu kapsül henüz açılmadı. Yasemin için gelecekte bir sürpriz olarak saklanıyor.'}
+        </Text>
+
         {entry.isCapsule && (
-          <View style={styles.capsuleBadge}>
+          <View style={[styles.capsuleBadge, unlocked && styles.capsuleBadgeUnlocked]}>
             <Text style={styles.capsuleBadgeText}>
-              {entry.capsuleUnlockAge
-                ? `${entry.capsuleUnlockAge} yasinda acilacak`
-                : 'Zaman kapsulu'}
+              {unlocked 
+                ? 'Kapsül Açıldı' 
+                : (entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yaşında açılacak` : 'Zaman kapsülü')}
             </Text>
           </View>
         )}
@@ -138,6 +156,9 @@ export default function FeedScreen() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Yasemin (çocuk) girişi yapıldığında isParent false olur.
+  const isParent = profile?.role !== 'child';
 
   useEffect(() => {
     if (!profile?.familyId) {
@@ -227,7 +248,9 @@ export default function FeedScreen() {
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => <EntryCard entry={item} index={index} />}
+        renderItem={({ item, index }) => (
+          <EntryCard entry={item} index={index} isParent={isParent} />
+        )}
         contentContainerStyle={[
           styles.list,
           entries.length === 0 && styles.listEmpty,
@@ -270,6 +293,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.capsule,
     borderStyle: 'dashed',
   },
+  capsuleCardLocked: {
+    opacity: 0.9,
+    backgroundColor: '#F3EFE7',
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,6 +333,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
     backgroundColor: COLORS.warmWhite,
   },
+  audioWrap: {
+    marginBottom: SPACING.sm,
+  },
   entryBody: {
     fontSize: 15,
     fontFamily: FONTS.body,
@@ -319,6 +349,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.sm,
     alignSelf: 'flex-start',
+  },
+  capsuleBadgeUnlocked: {
+    backgroundColor: COLORS.success,
   },
   capsuleBadgeText: {
     color: COLORS.warmWhite,

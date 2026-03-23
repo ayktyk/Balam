@@ -13,6 +13,7 @@ export interface Entry {
   photoUrls: string[];
   photoCaptions: string[];
   voiceUrl: string | null;
+  voiceDurationMillis?: number | null;
   milestoneTag: string | null;
   yaseminAgeWeeks: number | null;
   yaseminAgeLabel: string;

@@ -17,3 +17,8 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+
+// Web'de Storage hata/retry dongusu cok uzarsa UI "Kaydediliyor" durumunda asili kalıyor.
+// Daha kisa timeout ile hatayi kullaniciya hizlica gosteriyoruz.
+storage.maxUploadRetryTime = 10000;
+storage.maxOperationRetryTime = 10000;

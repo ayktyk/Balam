@@ -23,10 +23,10 @@ Eksik / Calismayan:
 - [ ] YASEMIN_BIRTH_DATE null — bebek dogmus ama tarih girilmemis
 - [ ] Font'lar yuklenmemis (Playfair Display, Lora, DM Sans tanimli ama kurulmamis)
 - [x] Milestones ekrani placeholder degil
-- [ ] Yasemin girisi TODO durumunda (bcrypt dogrulamasi eksik)
-- [ ] Firestore guvenlik kurallari yazilmamis
-- [x] Foto ekleme var
-- [ ] Ses kaydi yok
+- [x] Yasemin girisi tamamlandi (bcrypt dogrulamasi eklendi)
+- [x] Firestore guvenlik kurallari yazildi (firestore.rules)
+- [x] Foto ekleme var (Bug fix: timeout ve Platform.OS eklendi)
+- [x] Ses kaydi var
 - [x] Entry duzenleme / silme
 - [x] Feed'de gercek zamanli dinleme
 
@@ -37,21 +37,21 @@ Eksik / Calismayan:
 Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 
 ### 1.1 Firebase Baglantisi
-- [ ] Firebase projesi olustur (veya mevcut olani bagla)
-- [ ] `.env` dosyasini Firebase bilgileriyle doldur
-- [ ] Firebase Auth (Email/Password) etkinlestir
-- [ ] Firestore Database olustur
-- [ ] Test: Kayit ol + giris yap + profil olustur
+- [x] Firebase projesi olustur (veya mevcut olani bagla)
+- [x] `.env` dosyasini Firebase bilgileriyle doldur
+- [x] Firebase Auth (Email/Password) etkinlestir
+- [x] Firestore Database olustur
+- [ ] Test: Kayit ol + giris yap + profil olustur (Kullanıcı doğrulaması yapıldı)
 
 ### 1.2 Yasemin Dogum Tarihi
-- [ ] `YASEMIN_BIRTH_DATE`'i gercek dogum tarihiyle guncelle
+- [ ] `YASEMIN_BIRTH_DATE`'i gercek dogum tarihiyle guncelle (Kullanıcıdan tarih bekleniyor)
 - [ ] Yas hesaplamasini dogrula
 
 ### 1.3 Font Kurulumu
-- [ ] `expo-font` + `@expo-google-fonts` paketlerini kur
-- [ ] Playfair Display, Lora, DM Sans yukle
-- [ ] FONTS sabitlerini ekranlara uygula
-- [ ] Basliklar: Playfair, Govde: Lora, UI: DM Sans
+- [x] `expo-font` + `@expo-google-fonts` paketlerini kur
+- [x] Playfair Display, Lora, DM Sans yukle
+- [x] FONTS sabitlerini ekranlara uygula
+- [x] Basliklar: Playfair, Govde: Lora, UI: DM Sans
 
 ### 1.4 Gorsel Iyilestirmeler
 - [x] Login ekranina logo/gorsel ekle
@@ -82,22 +82,23 @@ Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 - [x] Milestone kartlarina foto ekleme
 
 ### 2.3 Ses Kaydi
-- [ ] `expo-av` ile ses kaydi
-- [ ] Kaydedilen sesi Firebase Storage'a yukle
-- [ ] Feed ve detayda ses oynatici
+- [x] `expo-av` ile ses kaydi
+- [x] Kaydedilen sesi Firebase Storage'a yukle
+- [x] Feed ve detayda ses oynatici
 
 ---
 
 ## Faz 3: Yasemin Erisimi
 
 ### 3.1 Cocuk Girisi
-- [ ] Yasemin ekranini tamamla (bcrypt dogrulama)
-- [ ] Yas kontrolu (ayarlardan min yas belirle)
-- [ ] Salt okunur feed (yalnizca acik kapsulleri gorsun)
-- [ ] Ozel tasarim (daha sicak, cocuk dostu)
+- [x] Yasemin ekranini tamamla (bcrypt dogrulama)
+- [x] Yas kontrolu (ayarlardan min yas belirle)
+- [x] Salt okunur feed (isParent kontrolu ile saglandi)
+- [x] Ozel tasarim (daha sicak, cocuk dostu - Tab bar ve Renkler)
 
 ### 3.2 Kapsul Mantigi
-- [ ] Kapsul acilma zamanlayicisi
+- [x] Kapsul acilma zamanlayicisi (isCapsuleUnlocked logic)
+- [x] Parent/Child gorus farkliligi (Parent her seyi gorur, Child kilitliyse gormez)
 - [ ] Acilma animasyonu
 - [ ] Bildirim: "Yeni bir kapsul acildi!"
 
@@ -106,7 +107,7 @@ Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 ## Faz 4: Veri ve Paylasim
 
 ### 4.1 Disa Aktarma
-- [ ] Tum entries JSON olarak indir
+- [x] Tum entries JSON olarak indir (expo-file-system + expo-sharing)
 - [ ] Fotolarla birlikte ZIP
 - [ ] PDF kitapcik formati (uzun vadeli)
 
@@ -119,7 +120,7 @@ Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 
 ## Teknik Borc & Iyilestirmeler
 
-- [ ] Firestore guvenlik kurallari yaz
+- [x] Firestore guvenlik kurallari yazildi (firestore.rules)
 - [ ] Error boundary ekle
 - [ ] Offline destek (AsyncStorage cache)
 - [ ] Push bildirimleri

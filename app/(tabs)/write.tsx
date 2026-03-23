@@ -12,11 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Audio } from 'expo-av';
 import { router, useLocalSearchParams } from 'expo-router';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
+import { AudioPlayer } from '../../components/AudioPlayer';
 import { db } from '../../lib/firebase';
-import { uploadImageAsync } from '../../lib/storage';
+import { uploadAudioAsync, uploadImageAsync } from '../../lib/storage';
 import { useAuth } from '../../hooks/useAuth';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import {
@@ -30,12 +32,19 @@ const ENTRY_TYPES: { key: EntryType; label: string; emoji: string }[] = [
   { key: 'letter', label: 'Mektup', emoji: '✉️' },
   { key: 'memory', label: 'Ani', emoji: '📷' },
   { key: 'milestone', label: 'Adim', emoji: '🌟' },
+  { key: 'voice', label: 'Ses', emoji: '🎙️' },
 ];
 
 type SelectedPhoto = {
   id: string;
   uri: string;
   fileName?: string | null;
+  mimeType?: string | null;
+};
+
+type RecordedVoice = {
+  uri: string;
+  durationMillis: number;
   mimeType?: string | null;
 };
 
@@ -77,7 +86,12 @@ function parseDateInput(value: string) {
 }
 
 function isEntryType(value: string | undefined): value is EntryType {
-  return value === 'letter' || value === 'memory' || value === 'milestone';
+  return (
+    value === 'letter'
+    || value === 'memory'
+    || value === 'milestone'
+    || value === 'voice'
+  );
 }
 
 function toSelectedPhoto(asset: ImagePicker.ImagePickerAsset, index: number): SelectedPhoto {
@@ -87,6 +101,33 @@ function toSelectedPhoto(asset: ImagePicker.ImagePickerAsset, index: number): Se
     fileName: asset.fileName,
     mimeType: asset.mimeType,
   };
+}
+
+function formatAudioDuration(durationMillis: number) {
+  if (!durationMillis) {
+    return '0:00';
+  }
+
+  const totalSeconds = Math.floor(durationMillis / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${`${seconds}`.padStart(2, '0')}`;
+}
+
+function getVoiceMimeType(uri: string) {
+  if (uri.includes('.webm')) {
+    return 'audio/webm';
+  }
+
+  if (uri.includes('.wav')) {
+    return 'audio/wav';
+  }
+
+  if (uri.includes('.mp3')) {
+    return 'audio/mpeg';
+  }
+
+  return 'audio/mp4';
 }
 
 export default function WriteScreen() {
@@ -109,6 +150,11 @@ export default function WriteScreen() {
   const [capsuleAge, setCapsuleAge] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingDurationMillis, setRecordingDurationMillis] = useState(0);
+  const [recordedVoice, setRecordedVoice] = useState<RecordedVoice | null>(
+    null
+  );
   const [selectedMilestoneTag, setSelectedMilestoneTag] = useState(
     typeof params.milestoneTag === 'string' ? params.milestoneTag : ''
   );
@@ -142,8 +188,48 @@ export default function WriteScreen() {
     }
   }, [params.milestoneTag, params.title, params.type]);
 
+  useEffect(() => {
+    return () => {
+      if (!recording) {
+        return;
+      }
+
+      recording.stopAndUnloadAsync().catch(() => undefined);
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+      }).catch(() => undefined);
+    };
+  }, [recording]);
+
+  async function setPlaybackModeAsync() {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+    });
+  }
+
   function handleTypeChange(nextType: EntryType) {
+    if (recording && nextType !== type) {
+      Alert.alert(
+        'Kayit suruyor',
+        'Tur degistirmeden once mevcut ses kaydini durdur.'
+      );
+      return;
+    }
+
     setType(nextType);
+
+    if (nextType === 'voice') {
+      setSelectedPhotos([]);
+    }
+
+    if (nextType !== 'voice') {
+      setRecordedVoice(null);
+      setRecordingDurationMillis(0);
+    }
 
     if (nextType !== 'milestone') {
       setSelectedMilestoneTag('');
@@ -157,9 +243,19 @@ export default function WriteScreen() {
   }
 
   function handleSelectMilestone(tag: string) {
+    if (recording) {
+      Alert.alert(
+        'Kayit suruyor',
+        'Milestone secmeden once mevcut ses kaydini durdur.'
+      );
+      return;
+    }
+
     const nextPreset = getMilestonePreset(tag);
 
     setType('milestone');
+    setRecordedVoice(null);
+    setRecordingDurationMillis(0);
     setSelectedMilestoneTag(tag);
 
     if (!nextPreset) {
@@ -173,6 +269,11 @@ export default function WriteScreen() {
 
   function removeSelectedPhoto(photoId: string) {
     setSelectedPhotos((current) => current.filter((photo) => photo.id !== photoId));
+  }
+
+  function removeRecordedVoice() {
+    setRecordedVoice(null);
+    setRecordingDurationMillis(0);
   }
 
   async function handlePickPhotos() {
@@ -203,14 +304,101 @@ export default function WriteScreen() {
     setSelectedPhotos(result.assets.map(toSelectedPhoto));
   }
 
+  async function handleStartRecording() {
+    if (saving) {
+      return;
+    }
+
+    const permission = await Audio.requestPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Izin gerekli',
+        'Ses kaydetmek icin mikrofon izni vermelisin.'
+      );
+      return;
+    }
+
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+      });
+
+      const { recording: nextRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        (status) => {
+          if (status.isRecording) {
+            setRecordingDurationMillis(status.durationMillis ?? 0);
+          }
+        },
+        250
+      );
+
+      setRecordedVoice(null);
+      setRecordingDurationMillis(0);
+      setRecording(nextRecording);
+    } catch (error: unknown) {
+      await setPlaybackModeAsync();
+
+      const message =
+        error instanceof Error ? error.message : 'Ses kaydi baslatilamadi.';
+      Alert.alert('Hata', message);
+    }
+  }
+
+  async function handleStopRecording() {
+    if (!recording) {
+      return;
+    }
+
+    const activeRecording = recording;
+    setRecording(null);
+
+    try {
+      const status = await activeRecording.stopAndUnloadAsync();
+      await setPlaybackModeAsync();
+      const uri = activeRecording.getURI();
+
+      if (!uri) {
+        throw new Error('Kayit dosyasi bulunamadi.');
+      }
+
+      setRecordedVoice({
+        uri,
+        durationMillis: status.durationMillis ?? recordingDurationMillis,
+        mimeType: getVoiceMimeType(uri),
+      });
+      setRecordingDurationMillis(0);
+    } catch (error: unknown) {
+      await setPlaybackModeAsync();
+      setRecordingDurationMillis(0);
+
+      const message =
+        error instanceof Error ? error.message : 'Ses kaydi durdurulamadi.';
+      Alert.alert('Hata', message);
+    }
+  }
+
   async function handleSave() {
     if (!user || !profile) {
       Alert.alert('Hata', 'Oturum bulunamadi.');
       return;
     }
 
-    if (!body.trim()) {
+    if (recording) {
+      Alert.alert('Hata', 'Kaydetmeden once ses kaydini durdurmalisin.');
+      return;
+    }
+
+    if (type !== 'voice' && !body.trim()) {
       Alert.alert('Hata', 'Bir seyler yazmalisin.');
+      return;
+    }
+
+    if (type === 'voice' && !recordedVoice) {
+      Alert.alert('Hata', 'Sesli mesaj kaydetmeden bu girisi kaydedemezsin.');
       return;
     }
 
@@ -233,22 +421,36 @@ export default function WriteScreen() {
     setSaving(true);
 
     try {
+      const mediaTimestamp = Date.now();
       const entryDateDate = nextEntryDate ?? toStartOfDay(now);
       const entryDate = Timestamp.fromDate(entryDateDate);
       const capsuleUnlockAge =
         isCapsule && capsuleAge ? parseInt(capsuleAge, 10) : null;
+      const trimmedTitle = title.trim();
+      const trimmedBody = body.trim();
 
-      const photoUrls = await Promise.all(
-        selectedPhotos.map((photo, index) =>
-          uploadImageAsync({
-            uri: photo.uri,
-            mimeType: photo.mimeType,
-            path: `entries/${profile.familyId}/${user.uid}/${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-          })
-        )
-      );
+      const photoUrls =
+        type === 'voice'
+          ? []
+          : await Promise.all(
+            selectedPhotos.map((photo, index) =>
+              uploadImageAsync({
+                uri: photo.uri,
+                mimeType: photo.mimeType,
+                path: `entries/${profile.familyId}/${user.uid}/${mediaTimestamp}-${index}-${Math.random().toString(36).slice(2)}`,
+              })
+            )
+          );
 
-      const photoCaptionBase = title.trim()
+      const voiceUrl = recordedVoice
+        ? await uploadAudioAsync({
+          uri: recordedVoice.uri,
+          mimeType: recordedVoice.mimeType,
+          path: `entries/${profile.familyId}/${user.uid}/${mediaTimestamp}-voice`,
+        })
+        : null;
+
+      const photoCaptionBase = trimmedTitle
         || (type === 'milestone' ? 'Milestone' : 'Ani');
       const photoCaptions = photoUrls.map((_, index) =>
         photoUrls.length === 1 ? photoCaptionBase : `${photoCaptionBase} ${index + 1}`
@@ -259,11 +461,12 @@ export default function WriteScreen() {
         authorId: user.uid,
         authorName: profile.displayName,
         type,
-        title: title.trim() || null,
-        body: body.trim(),
+        title: trimmedTitle || null,
+        body: trimmedBody || null,
         photoUrls,
         photoCaptions,
-        voiceUrl: null,
+        voiceUrl,
+        voiceDurationMillis: recordedVoice?.durationMillis ?? null,
         milestoneTag: type === 'milestone' ? selectedMilestoneTag || null : null,
         yaseminAgeWeeks: null,
         yaseminAgeLabel: getYaseminAgeLabel(entryDateDate),
@@ -277,7 +480,7 @@ export default function WriteScreen() {
         updatedAt: entryDate,
       });
 
-      Alert.alert('Kaydedildi', 'Ani Yasemin icin saklandi.', [
+      Alert.alert('Kaydedildi', 'Kayit Yasemin icin saklandi.', [
         { text: 'Tamam', onPress: () => router.back() },
       ]);
 
@@ -286,6 +489,8 @@ export default function WriteScreen() {
       setIsCapsule(false);
       setCapsuleAge('');
       setSelectedPhotos([]);
+      setRecordedVoice(null);
+      setRecordingDurationMillis(0);
       setSelectedMilestoneTag('');
       setMilestoneDateInput('');
       setType('letter');
@@ -424,48 +629,115 @@ export default function WriteScreen() {
           </View>
         )}
 
-        <View style={styles.photoCard}>
-          <View style={styles.photoHeader}>
-            <View style={styles.photoCopy}>
-              <Text style={styles.dateTitle}>{photoCardTitle}</Text>
-              <Text style={styles.dateHint}>{photoCardHint}</Text>
+        {type === 'voice' ? (
+          <View style={styles.voiceCard}>
+            <View style={styles.voiceHeader}>
+              <View style={styles.voiceCopy}>
+                <Text style={styles.dateTitle}>Ses kaydi</Text>
+                <Text style={styles.dateHint}>
+                  Yasemin icin kisa bir sesli mesaj birak. Kayittan sonra
+                  istersen kisa bir not da ekleyebilirsin.
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.voiceStatusPill,
+                  (recording || recordedVoice) && styles.voiceStatusPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.voiceStatusText,
+                    (recording || recordedVoice) && styles.voiceStatusTextActive,
+                  ]}
+                >
+                  {recording
+                    ? `Kayit ${formatAudioDuration(recordingDurationMillis)}`
+                    : recordedVoice
+                      ? `Hazir ${formatAudioDuration(recordedVoice.durationMillis)}`
+                      : 'Hazir degil'}
+                </Text>
+              </View>
             </View>
+
             <TouchableOpacity
-              style={styles.photoButton}
-              onPress={handlePickPhotos}
+              style={[
+                styles.voiceRecordButton,
+                recording && styles.voiceRecordButtonActive,
+              ]}
+              onPress={recording ? handleStopRecording : handleStartRecording}
               disabled={saving}
             >
-              <Text style={styles.photoButtonText}>
-                {selectedPhotos.length > 0 ? 'Fotolari degistir' : 'Foto sec'}
+              <Text style={styles.voiceRecordButtonText}>
+                {recording
+                  ? 'Kaydi durdur'
+                  : recordedVoice
+                    ? 'Tekrar kaydet'
+                    : 'Kayda basla'}
               </Text>
             </TouchableOpacity>
-          </View>
 
-          {selectedPhotos.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoPreviewRow}
-            >
-              {selectedPhotos.map((photo) => (
-                <View key={photo.id} style={styles.photoPreviewCard}>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={styles.photoPreview}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => removeSelectedPhoto(photo.id)}
-                    disabled={saving}
-                  >
-                    <Text style={styles.removePhotoText}>Kaldir</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+            {recordedVoice && !recording && (
+              <View style={styles.voicePreview}>
+                <AudioPlayer
+                  uri={recordedVoice.uri}
+                  durationMillis={recordedVoice.durationMillis}
+                />
+                <TouchableOpacity
+                  style={styles.removeVoiceButton}
+                  onPress={removeRecordedVoice}
+                  disabled={saving}
+                >
+                  <Text style={styles.removeVoiceText}>Kaydi sil</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.photoCard}>
+            <View style={styles.photoHeader}>
+              <View style={styles.photoCopy}>
+                <Text style={styles.dateTitle}>{photoCardTitle}</Text>
+                <Text style={styles.dateHint}>{photoCardHint}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={handlePickPhotos}
+                disabled={saving}
+              >
+                <Text style={styles.photoButtonText}>
+                  {selectedPhotos.length > 0 ? 'Fotolari degistir' : 'Foto sec'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedPhotos.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.photoPreviewRow}
+              >
+                {selectedPhotos.map((photo) => (
+                  <View key={photo.id} style={styles.photoPreviewCard}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={styles.photoPreview}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => removeSelectedPhoto(photo.id)}
+                      disabled={saving}
+                    >
+                      <Text style={styles.removePhotoText}>Kaldir</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         <TextInput
           style={styles.titleInput}
@@ -474,7 +746,9 @@ export default function WriteScreen() {
               ? 'Canim Yasemin...'
               : type === 'milestone'
                 ? 'Ilk adim'
-                : 'Baslik (opsiyonel)'
+                : type === 'voice'
+                  ? 'Sesli mesaj basligi (opsiyonel)'
+                  : 'Baslik (opsiyonel)'
           }
           placeholderTextColor={COLORS.inkLight}
           value={title}
@@ -484,7 +758,11 @@ export default function WriteScreen() {
 
         <TextInput
           style={styles.bodyInput}
-          placeholder="Yasemin'e ne anlatmak istersin?"
+          placeholder={
+            type === 'voice'
+              ? 'Istersen sesli mesajina kisa bir not ekleyebilirsin.'
+              : "Yasemin'e ne anlatmak istersin?"
+          }
           placeholderTextColor={COLORS.inkLight}
           value={body}
           onChangeText={setBody}
@@ -524,12 +802,19 @@ export default function WriteScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            (saving || Boolean(recording)) && styles.saveButtonDisabled,
+          ]}
           onPress={handleSave}
-          disabled={saving}
+          disabled={saving || Boolean(recording)}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            {saving
+              ? 'Kaydediliyor...'
+              : recording
+                ? 'Once kaydi durdur'
+                : 'Kaydet'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -695,6 +980,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.md,
   },
+  voiceCard: {
+    gap: SPACING.sm,
+    backgroundColor: COLORS.warmWhite,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+  },
   photoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -702,6 +993,16 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   photoCopy: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  voiceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+  },
+  voiceCopy: {
     flex: 1,
     gap: SPACING.xs,
   },
@@ -715,6 +1016,53 @@ const styles = StyleSheet.create({
     color: COLORS.ink,
     fontSize: 13,
     fontFamily: FONTS.uiBold,
+  },
+  voiceStatusPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cream,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+  },
+  voiceStatusPillActive: {
+    borderColor: COLORS.gold,
+    backgroundColor: COLORS.goldLight,
+  },
+  voiceStatusText: {
+    color: COLORS.inkLight,
+    fontSize: 12,
+    fontFamily: FONTS.uiMedium,
+  },
+  voiceStatusTextActive: {
+    color: COLORS.ink,
+  },
+  voiceRecordButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.gold,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  voiceRecordButtonActive: {
+    backgroundColor: COLORS.danger,
+  },
+  voiceRecordButtonText: {
+    color: COLORS.warmWhite,
+    fontSize: 15,
+    fontFamily: FONTS.uiBold,
+  },
+  voicePreview: {
+    gap: SPACING.sm,
+  },
+  removeVoiceButton: {
+    alignSelf: 'flex-start',
+  },
+  removeVoiceText: {
+    color: COLORS.danger,
+    fontSize: 13,
+    fontFamily: FONTS.uiMedium,
   },
   photoPreviewRow: {
     gap: SPACING.sm,
