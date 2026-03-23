@@ -25,9 +25,17 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
 
+  function showError(title: string, message: string) {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Hata', 'E-posta ve sifre gerekli.');
+      showError('Hata', 'E-posta ve sifre gerekli.');
       return;
     }
 
@@ -43,7 +51,7 @@ export default function LoginScreen() {
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Bir hata olustu.';
-      Alert.alert('Hata', message);
+      showError('Hata', message);
     } finally {
       setLoading(false);
     }
