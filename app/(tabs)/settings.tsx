@@ -180,6 +180,36 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {profile?.familyId && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Aile Daveti</Text>
+              <View style={styles.card}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.cardText}>Aile Kodu</Text>
+                  <Text style={styles.cardHint}>
+                    Bu kodu esine gonder. Kayit olduktan sonra "Mevcut Aileye Katil" seceneginde bu kodu girerek ayni aileye katilabilir.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.codeBox}
+                  onPress={() => {
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(profile.familyId);
+                      if (Platform.OS === 'web') {
+                        window.alert('Aile kodu kopyalandi!');
+                      } else {
+                        Alert.alert('Kopyalandi', 'Aile kodu panoya kopyalandi.');
+                      }
+                    }
+                  }}
+                >
+                  <Text style={styles.codeText}>{profile.familyId}</Text>
+                  <Text style={styles.codeCopyHint}>Kopyalamak icin dokun</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Veri</Text>
             <TouchableOpacity
@@ -329,6 +359,27 @@ const styles = StyleSheet.create({
     color: COLORS.inkLight,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  codeBox: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.warmWhite,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  codeText: {
+    fontSize: 14,
+    fontFamily: FONTS.uiBold,
+    color: COLORS.ink,
+    letterSpacing: 0.5,
+  },
+  codeCopyHint: {
+    fontSize: 11,
+    fontFamily: FONTS.ui,
+    color: COLORS.inkLight,
+    marginTop: SPACING.xs,
   },
   signOutButton: {
     marginTop: 'auto',
