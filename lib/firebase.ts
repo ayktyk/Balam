@@ -1,7 +1,7 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -12,13 +12,43 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+function getFirebaseApp(): FirebaseApp {
+  if (getApps().length > 0) return getApp();
+  return initializeApp(firebaseConfig);
+}
 
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const auth = getAuth(app);
+// Lazy initialization — build sirasinda calistirilmaz
+let _db: ReturnType<typeof getFirestore>;
+let _storage: ReturnType<typeof getStorage>;
+let _auth: Auth;
 
-// Web'de Storage hata/retry dongusu cok uzarsa UI "Kaydediliyor" durumunda asili kalıyor.
-// Daha kisa timeout ile hatayi kullaniciya hizlica gosteriyoruz.
-storage.maxUploadRetryTime = 10000;
-storage.maxOperationRetryTime = 10000;
+export function ensureFirebase() {
+  if (!_db) {
+    const app = getFirebaseApp();
+    _db = getFirestore(app);
+    _storage = getStorage(app);
+    _auth = getAuth(app);
+    _storage.maxUploadRetryTime = 10000;
+    _storage.maxOperationRetryTime = 10000;
+  }
+  return { db: _db, storage: _storage, auth: _auth };
+}
+
+// Proxy exports — ilk erisimde initialize edilir
+export const db = new Proxy({} as ReturnType<typeof getFirestore>, {
+  get(_, prop) {
+    return (ensureFirebase().db as any)[prop];
+  },
+});
+
+export const storage = new Proxy({} as ReturnType<typeof getStorage>, {
+  get(_, prop) {
+    return (ensureFirebase().storage as any)[prop];
+  },
+});
+
+export const auth = new Proxy({} as Auth, {
+  get(_, prop) {
+    return (ensureFirebase().auth as any)[prop];
+  },
+});
