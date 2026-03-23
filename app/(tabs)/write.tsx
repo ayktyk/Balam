@@ -146,6 +146,7 @@ export default function WriteScreen() {
     typeof params.title === 'string' ? params.title : ''
   );
   const [body, setBody] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [isCapsule, setIsCapsule] = useState(false);
   const [capsuleAge, setCapsuleAge] = useState('');
   const [saving, setSaving] = useState(false);
@@ -471,7 +472,7 @@ export default function WriteScreen() {
         yaseminAgeWeeks: null,
         yaseminAgeLabel: getYaseminAgeLabel(entryDateDate),
         entryDate,
-        isPrivate: false,
+        isPrivate,
         isCapsule,
         capsuleUnlockDate: null,
         capsuleUnlockAge,
@@ -486,6 +487,7 @@ export default function WriteScreen() {
 
       setTitle('');
       setBody('');
+      setIsPrivate(false);
       setIsCapsule(false);
       setCapsuleAge('');
       setSelectedPhotos([]);
@@ -770,6 +772,20 @@ export default function WriteScreen() {
           textAlignVertical="top"
           editable={!saving}
         />
+
+        <View style={styles.capsuleRow}>
+          <View style={styles.capsuleInfo}>
+            <Text style={styles.capsuleEmoji}>🔒</Text>
+            <Text style={styles.capsuleLabel}>Sadece benim mektubum</Text>
+            <Text style={styles.privateHint}>Diger ebeveyn goremez, sadece Yasemin okuyabilir</Text>
+          </View>
+          <Switch
+            value={isPrivate}
+            onValueChange={setIsPrivate}
+            trackColor={{ false: COLORS.border, true: COLORS.goldLight }}
+            thumbColor={isPrivate ? COLORS.gold : COLORS.creamDark}
+          />
+        </View>
 
         <View style={styles.capsuleRow}>
           <View style={styles.capsuleInfo}>
@@ -1125,6 +1141,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: FONTS.uiMedium,
     color: COLORS.capsule,
+  },
+  privateHint: {
+    fontSize: 12,
+    fontFamily: FONTS.ui,
+    color: COLORS.inkLight,
+    marginTop: 2,
   },
   capsuleOptions: {
     flexDirection: 'row',

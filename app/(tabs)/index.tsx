@@ -45,7 +45,7 @@ function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: num
   const unlocked = !entry.isCapsule || isCapsuleUnlocked(entry.capsuleUnlockDate?.toDate(), entry.capsuleUnlockAge);
   const canSeeContent = isParent || unlocked;
 
-  const icon = entry.isCapsule ? (unlocked ? '🔓' : '🔒') : ENTRY_ICONS[entry.type];
+  const icon = entry.isPrivate ? '🔒' : entry.isCapsule ? (unlocked ? '🔓' : '🔒') : ENTRY_ICONS[entry.type];
   const coverPhoto = entry.photoUrls[0];
 
   return (
@@ -152,13 +152,14 @@ function EmptyFeedState() {
 }
 
 export default function FeedScreen() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Yasemin (çocuk) girişi yapıldığında isParent false olur.
   const isParent = profile?.role !== 'child';
+  const isChild = profile?.role === 'child';
 
   useEffect(() => {
     if (!profile?.familyId) {
@@ -178,10 +179,17 @@ export default function FeedScreen() {
     const unsubscribe = onSnapshot(
       entriesQuery,
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
+        const allData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as Entry[];
+
+        // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
+        const data = allData.filter((entry) => {
+          if (!entry.isPrivate) return true;
+          if (isChild) return true; // Yasemin hepsini gorebilir
+          return entry.authorId === user?.uid; // Ebeveyn sadece kendisininkini gorur
+        });
 
         setEntries(data);
         setLoading(false);
