@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -41,6 +43,48 @@ export default function EntryDetailScreen() {
 
   const isOwner = Boolean(user && entry && user.uid === entry.authorId);
   const isParent = profile?.role !== 'child';
+
+  // Capsule reveal animation
+  const revealProgress = useRef(new Animated.Value(0)).current;
+  const sparkleOpacity = useRef(new Animated.Value(0)).current;
+  const [revealStarted, setRevealStarted] = useState(false);
+
+  useEffect(() => {
+    if (!entry?.isCapsule || revealStarted) return;
+    const unlocked = !entry.isCapsule || isCapsuleUnlocked(entry.capsuleUnlockDate?.toDate(), entry.capsuleUnlockAge);
+    const canSee = isParent || unlocked;
+    if (!canSee || !unlocked) return;
+
+    setRevealStarted(true);
+
+    // Sequence: scale+fade in content, then sparkle the badge
+    Animated.sequence([
+      Animated.timing(revealProgress, {
+        toValue: 1,
+        duration: 600,
+        delay: 300,
+        easing: Easing.out(Easing.back(1.1)),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(sparkleOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sparkleOpacity, {
+          toValue: 0.6,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sparkleOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [entry, isParent, revealStarted]);
 
   useEffect(() => {
     async function fetchEntry() {
@@ -284,85 +328,170 @@ export default function EntryDetailScreen() {
       </View>
 
       <View style={[styles.card, entry.isCapsule && !unlocked && styles.cardLocked]}>
-        {entry.photoUrls.length > 0 && canSeeContent && (
-          <>
-            {hasGallery ? (
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.galleryRow}
-              >
-                {entry.photoUrls.map((photoUrl, index) => (
-                  <View key={`${photoUrl}-${index}`} style={styles.gallerySlide}>
+        {/* Unlocked capsule content with reveal animation */}
+        {entry.isCapsule && unlocked && canSeeContent ? (
+          <Animated.View
+            style={{
+              opacity: revealProgress,
+              transform: [
+                {
+                  scale: revealProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.85, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            {entry.photoUrls.length > 0 && (
+              <>
+                {hasGallery ? (
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.galleryRow}
+                  >
+                    {entry.photoUrls.map((photoUrl, index) => (
+                      <View key={`${photoUrl}-${index}`} style={styles.gallerySlide}>
+                        <Image
+                          source={{ uri: photoUrl }}
+                          style={styles.coverPhoto}
+                          resizeMode="cover"
+                        />
+                        {entry.photoCaptions[index] && (
+                          <Text style={styles.photoCaption}>
+                            {entry.photoCaptions[index]}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View>
                     <Image
-                      source={{ uri: photoUrl }}
+                      source={{ uri: entry.photoUrls[0] }}
                       style={styles.coverPhoto}
                       resizeMode="cover"
                     />
-                    {entry.photoCaptions[index] && (
-                      <Text style={styles.photoCaption}>
-                        {entry.photoCaptions[index]}
-                      </Text>
+                    {entry.photoCaptions[0] && (
+                      <Text style={styles.photoCaption}>{entry.photoCaptions[0]}</Text>
                     )}
                   </View>
-                ))}
-              </ScrollView>
-            ) : (
-              <View>
-                <Image
-                  source={{ uri: entry.photoUrls[0] }}
-                  style={styles.coverPhoto}
-                  resizeMode="cover"
-                />
-                {entry.photoCaptions[0] && (
-                  <Text style={styles.photoCaption}>{entry.photoCaptions[0]}</Text>
                 )}
+                {hasGallery && (
+                  <Text style={styles.galleryHint}>
+                    Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
+                  </Text>
+                )}
+              </>
+            )}
+            {entry.voiceUrl && (
+              <View style={styles.voiceSection}>
+                <Text style={styles.voiceLabel}>Sesli mesaj</Text>
+                <AudioPlayer
+                  uri={entry.voiceUrl}
+                  durationMillis={entry.voiceDurationMillis ?? null}
+                />
               </View>
             )}
-
-            {hasGallery && (
-              <Text style={styles.galleryHint}>
-                Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
-              </Text>
-            )}
-          </>
-        )}
-        {entry.voiceUrl && canSeeContent && (
-          <View style={styles.voiceSection}>
-            <Text style={styles.voiceLabel}>Sesli mesaj</Text>
-            <AudioPlayer
-              uri={entry.voiceUrl}
-              durationMillis={entry.voiceDurationMillis ?? null}
-            />
-          </View>
-        )}
-
-        {canSeeContent ? (
+            {entry.title && <Text style={styles.title}>{entry.title}</Text>}
+            {entry.body && <Text style={styles.body}>{entry.body}</Text>}
+          </Animated.View>
+        ) : canSeeContent ? (
+          /* Non-capsule content — no animation needed */
           <>
+            {entry.photoUrls.length > 0 && (
+              <>
+                {hasGallery ? (
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.galleryRow}
+                  >
+                    {entry.photoUrls.map((photoUrl, index) => (
+                      <View key={`${photoUrl}-${index}`} style={styles.gallerySlide}>
+                        <Image
+                          source={{ uri: photoUrl }}
+                          style={styles.coverPhoto}
+                          resizeMode="cover"
+                        />
+                        {entry.photoCaptions[index] && (
+                          <Text style={styles.photoCaption}>
+                            {entry.photoCaptions[index]}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View>
+                    <Image
+                      source={{ uri: entry.photoUrls[0] }}
+                      style={styles.coverPhoto}
+                      resizeMode="cover"
+                    />
+                    {entry.photoCaptions[0] && (
+                      <Text style={styles.photoCaption}>{entry.photoCaptions[0]}</Text>
+                    )}
+                  </View>
+                )}
+                {hasGallery && (
+                  <Text style={styles.galleryHint}>
+                    Galeride {entry.photoUrls.length} fotograf var. Yana kaydir.
+                  </Text>
+                )}
+              </>
+            )}
+            {entry.voiceUrl && (
+              <View style={styles.voiceSection}>
+                <Text style={styles.voiceLabel}>Sesli mesaj</Text>
+                <AudioPlayer
+                  uri={entry.voiceUrl}
+                  durationMillis={entry.voiceDurationMillis ?? null}
+                />
+              </View>
+            )}
             {entry.title && <Text style={styles.title}>{entry.title}</Text>}
             {entry.body && <Text style={styles.body}>{entry.body}</Text>}
           </>
         ) : (
           <View style={styles.lockedState}>
-            <Text style={styles.lockedTitle}>Bu Kapsül Henüz Açılmadı</Text>
+            <Text style={styles.lockedTitle}>Bu Kapsul Henuz Acilmadi</Text>
             <Text style={styles.lockedText}>
-              Ailen senin için buraya özel bir anı bıraktı. {entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yaşına geldiğinde` : 'Zamanı geldiğinde'} buradaki sürprizi görebileceksin. 🌸
+              Ailen senin icin buraya ozel bir ani birakti. {entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yasina geldiginde` : 'Zamani geldiginde'} buradaki surprizi gorebileceksin.
             </Text>
           </View>
         )}
       </View>
 
       {entry.isCapsule && (
-        <View style={[styles.capsuleInfo, unlocked && styles.capsuleInfoUnlocked]}>
+        <Animated.View
+          style={[
+            styles.capsuleInfo,
+            unlocked && styles.capsuleInfoUnlocked,
+            unlocked && {
+              opacity: sparkleOpacity,
+              transform: [
+                {
+                  scale: sparkleOpacity.interpolate({
+                    inputRange: [0, 0.6, 1],
+                    outputRange: [0.95, 1, 1.02],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Text style={[styles.capsuleText, unlocked && styles.capsuleTextUnlocked]}>
-            {unlocked 
-              ? '✨ Bu kapsülün kilidi açıldı!' 
+            {unlocked
+              ? 'Bu kapsulun kilidi acildi!'
               : (entry.capsuleUnlockAge
                 ? `Bu kapsul Yasemin ${entry.capsuleUnlockAge} yasina gelince acilacak.`
                 : 'Bu bir zaman kapsulu.')}
           </Text>
-        </View>
+        </Animated.View>
       )}
 
       {isOwner && (

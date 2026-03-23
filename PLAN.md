@@ -99,7 +99,7 @@ Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 ### 3.2 Kapsul Mantigi
 - [x] Kapsul acilma zamanlayicisi (isCapsuleUnlocked logic)
 - [x] Parent/Child gorus farkliligi (Parent her seyi gorur, Child kilitliyse gormez)
-- [ ] Acilma animasyonu
+- [x] Acilma animasyonu
 - [ ] Bildirim: "Yeni bir kapsul acildi!"
 
 ---
@@ -121,8 +121,9 @@ Oncelik: Uygulamayi acilir, calisan, guzel gorunen hale getir.
 ## Teknik Borc & Iyilestirmeler
 
 - [x] Firestore guvenlik kurallari yazildi (firestore.rules)
-- [ ] Error boundary ekle
+- [x] Error boundary ekle
 - [ ] Offline destek (AsyncStorage cache)
 - [ ] Push bildirimleri
-- [ ] App ikonu ve splash screen tasarimi
-- [ ] EAS Build yapilandirmasi (production build)
+- [ ] App ikonu ve splash screen tasarimi (ozel gorsel gerekli)
+- [x] Vercel deploy yapilandirmasi (vercel.json + web export)
+- [ ] EAS Build yapilandirmasi (production build — opsiyonel)
