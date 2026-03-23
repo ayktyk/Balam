@@ -16,8 +16,41 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+
+function ThemedStack() {
+  const { colors, theme } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={theme.statusBarStyle} />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.cream },
+          headerTintColor: colors.ink,
+          headerTitleStyle: {
+            fontFamily: 'DMSans_700Bold',
+            fontWeight: '700',
+          },
+          contentStyle: { backgroundColor: colors.cream },
+        }}
+      >
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="entry/[id]"
+          options={{
+            title: '',
+            headerBackTitle: 'Geri',
+          }}
+        />
+      </Stack>
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -40,30 +73,13 @@ export default function RootLayout() {
   }
 
   return (
+    <SafeAreaProvider>
     <ErrorBoundary>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: COLORS.cream },
-          headerTintColor: COLORS.ink,
-          headerTitleStyle: {
-            fontFamily: 'DMSans_700Bold',
-            fontWeight: '700',
-          },
-          contentStyle: { backgroundColor: COLORS.cream },
-        }}
-      >
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="entry/[id]"
-          options={{
-            title: '',
-            headerBackTitle: 'Geri',
-          }}
-        />
-      </Stack>
+    <ThemeProvider>
+      <ThemedStack />
+    </ThemeProvider>
     </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 

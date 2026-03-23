@@ -18,8 +18,10 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { COLORS, FONTS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.cream }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView

@@ -8,11 +8,13 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { doc, setDoc, getDoc, collection, Timestamp } from 'firebase/firestore';
 import { hash } from 'bcryptjs';
 import { ensureFirebase } from '../../lib/firebase';
 import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const EMOJI_OPTIONS = ['🌿', '🌸', '🦋', '🌙', '⭐', '🌊', '🍂', '🌻'];
 const DEFAULT_CHILD_CODE = '2026';
@@ -26,6 +28,7 @@ function showError(title: string, message: string) {
 }
 
 export default function SetupScreen() {
+  const { colors } = useTheme();
   const [displayName, setDisplayName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('🌿');
   const [loading, setLoading] = useState(false);
@@ -142,7 +145,7 @@ export default function SetupScreen() {
 
   if (mode === 'choose') {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.cream }]}>
         <Text style={styles.title}>Hos geldin!</Text>
         <Text style={styles.subtitle}>Nasil devam etmek istersin?</Text>
 
@@ -163,12 +166,12 @@ export default function SetupScreen() {
           <Text style={styles.choiceTitle}>Mevcut Aileye Katil</Text>
           <Text style={styles.choiceHint}>Esinden aile kodunu al ve katil</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.cream }]}>
       <Text style={styles.title}>
         {mode === 'create' ? 'Aileyi Kur' : 'Aileye Katil'}
       </Text>
@@ -228,7 +231,7 @@ export default function SetupScreen() {
       <TouchableOpacity onPress={() => setMode('choose')} disabled={loading}>
         <Text style={styles.backText}>Geri don</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 

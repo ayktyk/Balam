@@ -21,6 +21,7 @@ import { db } from '../../lib/firebase';
 import { uploadAudioAsync, uploadImageAsync } from '../../lib/storage';
 import { useAuth } from '../../hooks/useAuth';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   getMilestonePreset,
   MILESTONE_PRESETS,
@@ -132,6 +133,7 @@ function getVoiceMimeType(uri: string) {
 
 export default function WriteScreen() {
   const { user, profile } = useAuth();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{
     type?: string;
     milestoneTag?: string;
@@ -516,7 +518,7 @@ export default function WriteScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.cream }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView

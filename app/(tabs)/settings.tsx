@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, View, Text, TouchableOpacity, StyleSheet, Platform, Switch, TextInput, ActivityIndicator } from 'react-native';
+import { Alert, ScrollView, View, Text, TouchableOpacity, StyleSheet, Platform, Switch, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import * as FileSystem from 'expo-file-system';
@@ -7,10 +7,16 @@ import * as Sharing from 'expo-sharing';
 import { doc, getDoc, updateDoc, getDocs, collection, query, where, orderBy } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '../../constants/theme';
+import { SPACING, RADIUS, SHADOWS, FONTS } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { THEMES } from '../../constants/themes';
+import type { ThemeId } from '../../constants/themes';
+
+const THEME_IDS = Object.keys(THEMES) as ThemeId[];
 
 export default function SettingsScreen() {
   const { profile, user } = useAuth();
+  const { colors, themeId, setTheme } = useTheme();
   const [signingOut, setSigningOut] = useState(false);
   const [loadingFamily, setLoadingFamily] = useState(false);
   const [familyData, setFamilyData] = useState<any>(null);
@@ -52,7 +58,7 @@ export default function SettingsScreen() {
 
   async function handleExport() {
     if (!profile?.familyId) return;
-    
+
     setExporting(true);
     try {
       const q = query(
@@ -60,14 +66,13 @@ export default function SettingsScreen() {
         where('familyId', '==', profile.familyId),
         orderBy('entryDate', 'desc')
       );
-      
+
       const snapshot = await getDocs(q);
       const entries = snapshot.docs.map(docSnapshot => {
         const data = docSnapshot.data();
         return {
           id: docSnapshot.id,
           ...data,
-          // Firestore timestamp'leri okunabilir tarihe ceviriyoruz
           entryDate: (data as any).entryDate?.toDate?.()?.toISOString() || null,
           createdAt: (data as any).createdAt?.toDate?.()?.toISOString() || null,
           updatedAt: (data as any).updatedAt?.toDate?.()?.toISOString() || null,
@@ -83,19 +88,35 @@ export default function SettingsScreen() {
         entries: entries
       };
 
-      const fileUri = `${FileSystem.cacheDirectory}balam-arsiv.json`;
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(exportData, null, 2), {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const jsonString = JSON.stringify(exportData, null, 2);
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/json',
-          dialogTitle: 'Balam Anı Arşivi',
-          UTI: 'public.json',
-        });
+      if (Platform.OS === 'web') {
+        // Web: Blob + download link
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'balam-arsiv.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       } else {
-        Alert.alert('Hata', 'Paylaşım bu cihazda desteklenmiyor.');
+        // Native: expo-file-system + expo-sharing
+        const fileUri = `${FileSystem.cacheDirectory}balam-arsiv.json`;
+        await FileSystem.writeAsStringAsync(fileUri, jsonString, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Balam Anı Arşivi',
+            UTI: 'public.json',
+          });
+        } else {
+          Alert.alert('Hata', 'Paylaşım bu cihazda desteklenmiyor.');
+        }
       }
     } catch (error) {
       console.error('Export error:', error);
@@ -126,50 +147,80 @@ export default function SettingsScreen() {
   const isParent = profile?.role !== 'child';
 
   return (
-    <View style={styles.container}>
-      {/* Profil kartı */}
-      <View style={styles.profileCard}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.contentContainer}>
+      {/* Profil karti */}
+      <View style={[styles.profileCard, { backgroundColor: colors.creamDark }]}>
         <Text style={styles.profileEmoji}>
           {profile?.avatarEmoji ?? '🌿'}
         </Text>
         <View>
-          <Text style={styles.profileName}>
-            {profile?.displayName ?? 'Kullanıcı'}
+          <Text style={[styles.profileName, { color: colors.ink }]}>
+            {profile?.displayName ?? 'Kullanici'}
           </Text>
-          <Text style={styles.profileRole}>{isParent ? 'Ebeveyn' : 'Yasemin'}</Text>
+          <Text style={[styles.profileRole, { color: colors.inkLight }]}>{isParent ? 'Ebeveyn' : 'Yasemin'}</Text>
+        </View>
+      </View>
+
+      {/* Tema secici */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Tema</Text>
+        <View style={styles.themeGrid}>
+          {THEME_IDS.map((id) => {
+            const t = THEMES[id];
+            const isActive = id === themeId;
+            return (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.themeCard,
+                  { backgroundColor: t.colors.creamDark, borderColor: isActive ? t.colors.gold : t.colors.border },
+                  isActive && { borderWidth: 2.5 },
+                ]}
+                onPress={() => setTheme(id)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.themePreview, { backgroundColor: t.colors.cream }]}>
+                  <View style={[styles.themePreviewDot, { backgroundColor: t.colors.gold }]} />
+                  <View style={[styles.themePreviewLine, { backgroundColor: t.colors.ink }]} />
+                  <View style={[styles.themePreviewLine, styles.themePreviewLineShort, { backgroundColor: t.colors.inkLight }]} />
+                </View>
+                <Text style={[styles.themeCardName, { color: t.colors.ink }]}>{t.emoji} {t.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
       {isParent ? (
         <>
-          {/* Yasemin erişimi */}
+          {/* Yasemin erisimi */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Yasemin'in Erişimi</Text>
-              {updating && <ActivityIndicator size="small" color={COLORS.gold} />}
+              <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Yasemin'in Erisimi</Text>
+              {updating && <ActivityIndicator size="small" color={colors.gold} />}
             </View>
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.creamDark }]}>
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.cardText}>Giriş İzni</Text>
-                  <Text style={styles.cardHint}>Yasemin özel koduyla giriş yapabilsin.</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Giris Izni</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Yasemin ozel koduyla giris yapabilsin.</Text>
                 </View>
                 <Switch
                   value={familyData?.childAccessEnabled ?? false}
                   onValueChange={(val) => updateFamilySetting('childAccessEnabled', val)}
-                  trackColor={{ false: COLORS.border, true: COLORS.goldLight }}
-                  thumbColor={(familyData?.childAccessEnabled) ? COLORS.gold : COLORS.creamDark}
+                  trackColor={{ false: colors.border, true: colors.goldLight }}
+                  thumbColor={(familyData?.childAccessEnabled) ? colors.gold : colors.creamDark}
                   disabled={loadingFamily || updating}
                 />
               </View>
 
-              <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border + '40' }]}>
+              <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: colors.border + '40' }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.cardText}>Görüntüleme Yaşı</Text>
-                  <Text style={styles.cardHint}>Anıları görmeye başlayabileceği yaş.</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Goruntuleme Yasi</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>Anilari gormeye baslayabilecegi yas.</Text>
                 </View>
                 <TextInput
-                  style={styles.ageInput}
+                  style={[styles.ageInput, { backgroundColor: colors.warmWhite, color: colors.ink, borderColor: colors.border }]}
                   value={String(familyData?.childMinAge ?? 0)}
                   onChangeText={(val) => updateFamilySetting('childMinAge', parseInt(val || '0', 10))}
                   keyboardType="number-pad"
@@ -182,16 +233,16 @@ export default function SettingsScreen() {
 
           {profile?.familyId && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Aile Daveti</Text>
-              <View style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Aile Daveti</Text>
+              <View style={[styles.card, { backgroundColor: colors.creamDark }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.cardText}>Aile Kodu</Text>
-                  <Text style={styles.cardHint}>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Aile Kodu</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>
                     Bu kodu esine gonder. Kayit olduktan sonra "Mevcut Aileye Katil" seceneginde bu kodu girerek ayni aileye katilabilir.
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.codeBox}
+                  style={[styles.codeBox, { backgroundColor: colors.warmWhite, borderColor: colors.border }]}
                   onPress={() => {
                     if (typeof navigator !== 'undefined' && navigator.clipboard) {
                       navigator.clipboard.writeText(profile.familyId);
@@ -203,28 +254,28 @@ export default function SettingsScreen() {
                     }
                   }}
                 >
-                  <Text style={styles.codeText}>{profile.familyId}</Text>
-                  <Text style={styles.codeCopyHint}>Kopyalamak icin dokun</Text>
+                  <Text style={[styles.codeText, { color: colors.ink }]}>{profile.familyId}</Text>
+                  <Text style={[styles.codeCopyHint, { color: colors.inkLight }]}>Kopyalamak icin dokun</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Veri</Text>
+            <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Veri</Text>
             <TouchableOpacity
-              style={[styles.card, exporting && { opacity: 0.7 }]}
+              style={[styles.card, { backgroundColor: colors.creamDark }, exporting && { opacity: 0.7 }]}
               onPress={handleExport}
               disabled={exporting}
             >
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.cardText}>Tüm Anıları Dışa Aktar</Text>
-                  <Text style={styles.cardHint}>
-                    JSON formatında anıları indir.
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Tum Anilari Disa Aktar</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>
+                    JSON formatinda anilari indir.
                   </Text>
                 </View>
-                {exporting && <ActivityIndicator size="small" color={COLORS.gold} />}
+                {exporting && <ActivityIndicator size="small" color={colors.gold} />}
               </View>
             </TouchableOpacity>
           </View>
@@ -232,39 +283,40 @@ export default function SettingsScreen() {
       ) : (
         <View style={styles.childModeInfo}>
           <Text style={styles.childModeEmoji}>🧸</Text>
-          <Text style={styles.childModeTitle}>Yasemin Modu</Text>
-          <Text style={styles.childModeText}>
-            Bu modda sadece ailenin senin için açtığı anıları görebilirsin. 
-            Ayarları değiştirmek için ebeveyn girişine dönmelisin.
+          <Text style={[styles.childModeTitle, { color: colors.ink }]}>Yasemin Modu</Text>
+          <Text style={[styles.childModeText, { color: colors.inkLight }]}>
+            Bu modda sadece ailenin senin icin actigi anilari gorebilirsin.
+            Ayarlari degistirmek icin ebeveyn girisine donmelisin.
           </Text>
         </View>
       )}
 
-      {/* Çıkış */}
+      {/* Cikis */}
       <TouchableOpacity
-        style={[styles.signOutButton, signingOut && { opacity: 0.5 }]}
+        style={[styles.signOutButton, { borderColor: colors.danger }, signingOut && { opacity: 0.5 }]}
         onPress={handleSignOut}
         disabled={signingOut}
       >
-        <Text style={styles.signOutText}>
-          {signingOut ? 'Çıkış yapılıyor...' : 'Çıkış Yap'}
+        <Text style={[styles.signOutText, { color: colors.danger }]}>
+          {signingOut ? 'Cikis yapiliyor...' : 'Cikis Yap'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.cream,
+  },
+  contentContainer: {
     padding: SPACING.lg,
+    paddingBottom: SPACING.xxl,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    backgroundColor: COLORS.creamDark,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginBottom: SPACING.xl,
@@ -276,12 +328,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontFamily: FONTS.heading,
-    color: COLORS.ink,
   },
   profileRole: {
     fontSize: 13,
     fontFamily: FONTS.ui,
-    color: COLORS.inkLight,
     marginTop: 2,
   },
   section: {
@@ -296,12 +346,52 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontFamily: FONTS.uiBold,
-    color: COLORS.inkLight,
     textTransform: 'uppercase',
     letterSpacing: 1,
+    marginBottom: SPACING.sm,
+  },
+  themeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  themeCard: {
+    width: '30%' as any,
+    flexGrow: 1,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  themePreview: {
+    width: '100%',
+    height: 40,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.xs,
+    marginBottom: SPACING.xs,
+    justifyContent: 'center',
+  },
+  themePreviewDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginBottom: 4,
+  },
+  themePreviewLine: {
+    width: '60%',
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 2,
+  },
+  themePreviewLineShort: {
+    width: '40%',
+  },
+  themeCardName: {
+    fontSize: 11,
+    fontFamily: FONTS.uiMedium,
+    textAlign: 'center',
   },
   card: {
-    backgroundColor: COLORS.creamDark,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     ...SHADOWS.card,
@@ -318,24 +408,19 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 15,
     fontFamily: FONTS.uiMedium,
-    color: COLORS.ink,
   },
   cardHint: {
     fontSize: 13,
     fontFamily: FONTS.ui,
-    color: COLORS.inkLight,
     marginTop: SPACING.xs,
   },
   ageInput: {
     width: 50,
-    backgroundColor: COLORS.warmWhite,
     borderRadius: RADIUS.sm,
     padding: SPACING.sm,
     textAlign: 'center',
     fontFamily: FONTS.uiBold,
-    color: COLORS.ink,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   childModeInfo: {
     flex: 1,
@@ -350,47 +435,39 @@ const styles = StyleSheet.create({
   childModeTitle: {
     fontSize: 24,
     fontFamily: FONTS.heading,
-    color: COLORS.ink,
     textAlign: 'center',
   },
   childModeText: {
     fontSize: 16,
     fontFamily: FONTS.body,
-    color: COLORS.inkLight,
     textAlign: 'center',
     lineHeight: 24,
   },
   codeBox: {
     marginTop: SPACING.md,
-    backgroundColor: COLORS.warmWhite,
     borderRadius: RADIUS.sm,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
   },
   codeText: {
     fontSize: 14,
     fontFamily: FONTS.uiBold,
-    color: COLORS.ink,
     letterSpacing: 0.5,
   },
   codeCopyHint: {
     fontSize: 11,
     fontFamily: FONTS.ui,
-    color: COLORS.inkLight,
     marginTop: SPACING.xs,
   },
   signOutButton: {
-    marginTop: 'auto',
+    marginTop: SPACING.xl,
     padding: SPACING.md,
     alignItems: 'center',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.danger,
   },
   signOutText: {
-    color: COLORS.danger,
     fontSize: 15,
     fontFamily: FONTS.uiMedium,
   },

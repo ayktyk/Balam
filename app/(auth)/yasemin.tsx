@@ -8,16 +8,19 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { compare } from 'bcryptjs';
 import { collection, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_MS = 5 * 60 * 1000; // 5 dakika
 
 export default function YaseminScreen() {
+  const { colors } = useTheme();
   const [code, setCode] = useState(['', '', '', '']);
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
@@ -119,7 +122,7 @@ export default function YaseminScreen() {
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.cream }]}>
       <Text style={styles.emoji}>🌸</Text>
       <Text style={styles.title}>Merhaba Yasemin</Text>
       <Text style={styles.subtitle}>
@@ -158,7 +161,7 @@ export default function YaseminScreen() {
           Biraz bekle, sonra tekrar dene.
         </Text>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

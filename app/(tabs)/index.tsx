@@ -27,13 +27,15 @@ import {
   SHADOWS,
   SPACING,
 } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import type { ThemeColors } from '../../constants/themes';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { FadeInView } from '../../components/FadeInView';
 import { Entry } from '../../types/entry';
 
 import { isCapsuleUnlocked } from '../../constants/yasemin';
 
-function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: number; isParent?: boolean }) {
+function EntryCard({ entry, index, isParent = true, colors }: { entry: Entry; index: number; isParent?: boolean; colors: ThemeColors }) {
   const entryDate = entry.entryDate.toDate();
   const dateStr = entryDate.toLocaleDateString('tr-TR', {
     day: 'numeric',
@@ -52,8 +54,9 @@ function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: num
     <FadeInView delay={Math.min(index * 70, 280)}>
       <TouchableOpacity
         style={[
-          styles.card, 
-          entry.isCapsule && styles.capsuleCard,
+          styles.card,
+          { backgroundColor: colors.creamDark },
+          entry.isCapsule && [styles.capsuleCard, { backgroundColor: colors.capsuleBg, borderColor: colors.capsule }],
           entry.isCapsule && !unlocked && styles.capsuleCardLocked
         ]}
         onPress={() => router.push(`/entry/${entry.id}`)}
@@ -62,8 +65,8 @@ function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: num
         <View style={styles.cardHeader}>
           <Text style={styles.authorEmoji}>{icon}</Text>
           <View style={styles.cardMeta}>
-            <Text style={styles.authorName}>{entry.authorName}</Text>
-            <Text style={styles.dateText}>
+            <Text style={[styles.authorName, { color: colors.ink }]}>{entry.authorName}</Text>
+            <Text style={[styles.dateText, { color: colors.inkLight }]}>
               {dateStr} · {entry.yaseminAgeLabel}
             </Text>
           </View>
@@ -87,15 +90,15 @@ function EntryCard({ entry, index, isParent = true }: { entry: Entry; index: num
           </View>
         )}
 
-        {entry.title && <Text style={styles.entryTitle}>{entry.title}</Text>}
+        {entry.title && <Text style={[styles.entryTitle, { color: colors.ink }]}>{entry.title}</Text>}
 
-        <Text style={styles.entryBody} numberOfLines={3}>
+        <Text style={[styles.entryBody, { color: colors.ink }]} numberOfLines={3}>
           {canSeeContent ? entry.body : 'Bu kapsül henüz açılmadı. Yasemin için gelecekte bir sürpriz olarak saklanıyor.'}
         </Text>
 
         {entry.isCapsule && (
-          <View style={[styles.capsuleBadge, unlocked && styles.capsuleBadgeUnlocked]}>
-            <Text style={styles.capsuleBadgeText}>
+          <View style={[styles.capsuleBadge, { backgroundColor: colors.capsule }, unlocked && { backgroundColor: colors.success }]}>
+            <Text style={[styles.capsuleBadgeText, { color: colors.warmWhite }]}>
               {unlocked 
                 ? 'Kapsül Açıldı' 
                 : (entry.capsuleUnlockAge ? `${entry.capsuleUnlockAge} yaşında açılacak` : 'Zaman kapsülü')}
@@ -153,6 +156,7 @@ function EmptyFeedState() {
 
 export default function FeedScreen() {
   const { profile, user } = useAuth();
+  const { colors } = useTheme();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -245,19 +249,19 @@ export default function FeedScreen() {
 
   if (loading) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Yukleniyor...</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.cream }]}>
+        <Text style={[styles.emptyText, { color: colors.inkLight }]}>Yukleniyor...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.cream }]}>
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <EntryCard entry={item} index={index} isParent={isParent} />
+          <EntryCard entry={item} index={index} isParent={isParent} colors={colors} />
         )}
         contentContainerStyle={[
           styles.list,
@@ -267,7 +271,7 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.gold}
+            tintColor={colors.gold}
           />
         }
         ListEmptyComponent={<EmptyFeedState />}

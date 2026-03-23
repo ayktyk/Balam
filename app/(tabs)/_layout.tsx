@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
-import { COLORS, FONTS } from '../../constants/theme';
+import { FONTS } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -20,23 +22,21 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 
 export default function TabsLayout() {
   const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const isParent = profile?.role !== 'child';
-  
-  // Çocuk modunda daha sıcak bir renk teması (krem yerine altın/sarı tonları)
-  const childBg = '#FFF9EB';
-  const bgColor = isParent ? COLORS.cream : childBg;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: [styles.tabBar, { backgroundColor: bgColor }],
+        tabBarStyle: [styles.tabBar, { backgroundColor: colors.cream, borderTopColor: colors.border, paddingBottom: insets.bottom + 8, height: 72 + insets.bottom }],
         tabBarItemStyle: styles.tabBarItem,
-        tabBarActiveTintColor: COLORS.ink,
-        tabBarInactiveTintColor: COLORS.inkLight,
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.inkLight,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIconStyle: styles.tabBarIcon,
-        headerStyle: { backgroundColor: bgColor },
-        headerTintColor: COLORS.ink,
+        headerStyle: { backgroundColor: colors.cream },
+        headerTintColor: colors.ink,
       }}
     >
       <Tabs.Screen
@@ -83,8 +83,6 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: COLORS.cream,
-    borderTopColor: COLORS.border,
     borderTopWidth: 1,
     height: 72,
     paddingTop: 6,

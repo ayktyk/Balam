@@ -26,6 +26,7 @@ import {
   SHADOWS,
   SPACING,
 } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { Entry } from '../../types/entry';
 
@@ -34,6 +35,7 @@ import { isCapsuleUnlocked } from '../../constants/yasemin';
 export default function EntryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, profile } = useAuth();
+  const { colors } = useTheme();
   const [entry, setEntry] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -270,7 +272,7 @@ export default function EntryDetailScreen() {
   if (editing) {
     return (
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.cream }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -319,7 +321,7 @@ export default function EntryDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.content}>
       <View style={styles.meta}>
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.authorName}>{entry.authorName}</Text>
