@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Balam",
+    "name": "aybalam",
     "slug": "balam",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,8 +27,8 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static",
-      "name": "Balam - Aile Ani Gunlugu",
-      "shortName": "Balam",
+      "name": "aybalam - Aile Ani Gunlugu",
+      "shortName": "aybalam",
       "themeColor": "#F5F0E8",
       "backgroundColor": "#F5F0E8",
       "display": "standalone",
