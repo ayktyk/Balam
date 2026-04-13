@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Premium pink gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#FFA5C3"/>
+      <stop offset="50%" stop-color="#F272A5"/>
+      <stop offset="100%" stop-color="#D13D7C"/>
+    </radialGradient>
+
+    <!-- Petal gradient - soft cream with depth -->
+    <radialGradient id="petalGrad" cx="50%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FFFAF5"/>
+      <stop offset="80%" stop-color="#FFE4D1"/>
+      <stop offset="100%" stop-color="#FFD0B3"/>
+    </radialGradient>
+
+    <!-- Back petal gradient - slightly darker -->
+    <radialGradient id="backPetalGrad" cx="50%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#FFF5EC"/>
+      <stop offset="60%" stop-color="#FFDDC0"/>
+      <stop offset="100%" stop-color="#FFBE95"/>
+    </radialGradient>
+
+    <!-- Center gradient -->
+    <radialGradient id="centerGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFF0A0"/>
+      <stop offset="40%" stop-color="#FFD93D"/>
+      <stop offset="100%" stop-color="#E89020"/>
+    </radialGradient>
+
+    <!-- Subtle petal shadow at base -->
+    <radialGradient id="petalShade" cx="50%" cy="90%" r="50%">
+      <stop offset="0%" stop-color="#E8A080" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#FFE4D1" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Flower drop shadow -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8.192"/>
+      <feOffset dx="0" dy="4.096" result="offsetblur"/>
+      <feFlood flood-color="#A02050" flood-opacity="0.35"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Petal outline/glow -->
+    <filter id="petalGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3.072" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7BC88A"/>
+      <stop offset="100%" stop-color="#3A8050"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="225.28" ry="225.28" fill="url(#bgGrad)"/>
+
+  <!-- Soft decorative circles for premium feel -->
+  <circle cx="184.32" cy="204.8" r="51.2" fill="#FFB3CB" opacity="0.25"/>
+  <circle cx="870.4" cy="153.6" r="35.84" fill="#FFB3CB" opacity="0.2"/>
+  <circle cx="901.12" cy="798.72" r="40.96" fill="#FFB3CB" opacity="0.22"/>
+  <circle cx="122.88" cy="768" r="30.72" fill="#FFB3CB" opacity="0.2"/>
+  
+  <g filter="url(#dropShadow)">
+    <!-- Decorative leaves at bottom -->
+    <path d="M 409.6,778.24
+             Q 286.72,757.76 245.76,675.84
+             Q 327.68,706.56 409.6,778.24 Z"
+          fill="url(#leafGrad)" opacity="0.9"/>
+    <path d="M 614.4,778.24
+             Q 737.28,757.76 778.24,675.84
+             Q 696.3199999999999,706.56 614.4,778.24 Z"
+          fill="url(#leafGrad)" opacity="0.9"/>
+
+    <!-- Back petals (offset by 36°) -->
+    <path d="M 550.08,437.34
+          Q 661.62,375.29 706.41,182.98
+          Q 537.35,285.01 512.80,410.26
+          Z M 536.34,482.69
+          Q 629.82,569.59 826.56,552.77
+          Q 677.29,423.51 550.58,438.87
+          Z M 488.96,483.64
+          Q 435.20,599.40 512.00,781.31
+          Q 588.80,599.40 535.04,483.64
+          Z M 473.42,438.87
+          Q 346.71,423.51 197.44,552.77
+          Q 394.18,569.59 487.66,482.69
+          Z M 511.20,410.26
+          Q 486.65,285.01 317.59,182.98
+          Q 362.38,375.29 473.92,437.34
+          Z" fill="url(#backPetalGrad)" opacity="0.92"
+          stroke="#E8A080" stroke-width="2.048" stroke-opacity="0.3"/>
+
+    <!-- Main petals -->
+    <path d="M 541.18,411.65
+          Q 609.28,275.46 512.00,61.44
+          Q 414.72,275.46 482.82,411.65
+          Z M 558.03,466.29
+          Q 708.59,488.97 882.08,330.32
+          Q 648.47,303.93 539.99,410.78
+          Z M 511.26,499.19
+          Q 536.22,649.40 740.72,765.36
+          Q 693.62,535.04 558.48,464.89
+          Z M 465.52,464.89
+          Q 330.38,535.04 283.28,765.36
+          Q 487.78,649.40 512.74,499.19
+          Z M 484.01,410.78
+          Q 375.53,303.93 141.92,330.32
+          Q 315.41,488.97 465.97,466.29
+          Z" fill="url(#petalGrad)" opacity="1"
+          stroke="#D88060" stroke-width="2.56" stroke-opacity="0.35"
+          filter="url(#petalGlow)"/>
+
+    <!-- Petal shading at base for depth -->
+    <circle cx="512" cy="450.56" r="133.12" fill="url(#petalShade)" opacity="0.5"/>
+
+    <!-- Center disc -->
+    <circle cx="512" cy="450.56" r="66.56" fill="url(#centerGrad)"/>
+
+    <!-- Stamens (tiny dots around center) -->
+    <circle cx="550.91" cy="450.56" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="539.51" cy="478.07" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="512.00" cy="489.47" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="484.49" cy="478.07" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="473.09" cy="450.56" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="484.49" cy="423.05" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="512.00" cy="411.65" r="9.22" fill="#E89020" opacity="0.85"/>
+    <circle cx="539.51" cy="423.05" r="9.22" fill="#E89020" opacity="0.85"/>
+
+    <!-- Center highlight -->
+    <circle cx="496.64" cy="432.128" r="28.672" fill="#FFF4B0" opacity="0.7"/>
+    <circle cx="491.52" cy="428.032" r="12.288" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+
+  <text x="512" y="880.64"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="79.872"
+        font-weight="300"
+        font-style="italic"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        opacity="0.97"
+        letter-spacing="4.096">aybalam</text>
+</svg>

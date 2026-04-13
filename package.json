@@ -38,6 +38,7 @@
   "devDependencies": {
     "@google-cloud/storage": "^7.19.0",
     "@types/react": "~19.2.2",
+    "sharp": "^0.34.5",
     "typescript": "~5.9.2"
   },
   "private": true
