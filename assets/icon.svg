@@ -1,46 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <!-- Premium pink gradient -->
     <radialGradient id="bgGrad" cx="50%" cy="35%" r="75%">
       <stop offset="0%" stop-color="#FFA5C3"/>
       <stop offset="50%" stop-color="#F272A5"/>
       <stop offset="100%" stop-color="#D13D7C"/>
     </radialGradient>
 
-    <!-- Petal gradient - soft cream with depth -->
-    <radialGradient id="petalGrad" cx="50%" cy="20%" r="80%">
+    <radialGradient id="petalGrad" cx="50%" cy="15%" r="90%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="40%" stop-color="#FFFAF5"/>
-      <stop offset="80%" stop-color="#FFE4D1"/>
-      <stop offset="100%" stop-color="#FFD0B3"/>
+      <stop offset="55%" stop-color="#FFFBF5"/>
+      <stop offset="90%" stop-color="#FFE8D4"/>
+      <stop offset="100%" stop-color="#F5C8A8"/>
     </radialGradient>
 
-    <!-- Back petal gradient - slightly darker -->
-    <radialGradient id="backPetalGrad" cx="50%" cy="20%" r="80%">
-      <stop offset="0%" stop-color="#FFF5EC"/>
-      <stop offset="60%" stop-color="#FFDDC0"/>
-      <stop offset="100%" stop-color="#FFBE95"/>
+    <radialGradient id="petalShade" cx="50%" cy="85%" r="55%">
+      <stop offset="0%" stop-color="#D88B65" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFE8D4" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- Center gradient -->
-    <radialGradient id="centerGrad" cx="40%" cy="35%" r="60%">
-      <stop offset="0%" stop-color="#FFF0A0"/>
-      <stop offset="40%" stop-color="#FFD93D"/>
-      <stop offset="100%" stop-color="#E89020"/>
+    <radialGradient id="centerGrad" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFF4A0"/>
+      <stop offset="50%" stop-color="#FFD93D"/>
+      <stop offset="100%" stop-color="#D88010"/>
     </radialGradient>
 
-    <!-- Subtle petal shadow at base -->
-    <radialGradient id="petalShade" cx="50%" cy="90%" r="50%">
-      <stop offset="0%" stop-color="#E8A080" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#FFE4D1" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8FD49A"/>
+      <stop offset="50%" stop-color="#5BAE6E"/>
+      <stop offset="100%" stop-color="#2E7040"/>
+    </linearGradient>
 
-    <!-- Flower drop shadow -->
     <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="8.192"/>
-      <feOffset dx="0" dy="4.096" result="offsetblur"/>
-      <feFlood flood-color="#A02050" flood-opacity="0.35"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10.24"/>
+      <feOffset dx="0" dy="5.12" result="offsetblur"/>
+      <feFlood flood-color="#8B1050" flood-opacity="0.4"/>
       <feComposite in2="offsetblur" operator="in"/>
       <feMerge>
         <feMergeNode/>
@@ -48,103 +42,147 @@
       </feMerge>
     </filter>
 
-    <!-- Petal outline/glow -->
-    <filter id="petalGlow" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="3.072" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="petalDepth" x="-5%" y="-5%" width="110%" height="110%">
+      <feGaussianBlur stdDeviation="2.048"/>
     </filter>
-
-    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7BC88A"/>
-      <stop offset="100%" stop-color="#3A8050"/>
-    </linearGradient>
   </defs>
 
   <rect x="0" y="0" width="1024" height="1024" rx="225.28" ry="225.28" fill="url(#bgGrad)"/>
-
-  <!-- Soft decorative circles for premium feel -->
   <circle cx="184.32" cy="204.8" r="51.2" fill="#FFB3CB" opacity="0.25"/>
   <circle cx="870.4" cy="153.6" r="35.84" fill="#FFB3CB" opacity="0.2"/>
   <circle cx="901.12" cy="798.72" r="40.96" fill="#FFB3CB" opacity="0.22"/>
   <circle cx="122.88" cy="768" r="30.72" fill="#FFB3CB" opacity="0.2"/>
   
   <g filter="url(#dropShadow)">
-    <!-- Decorative leaves at bottom -->
-    <path d="M 409.6,778.24
-             Q 286.72,757.76 245.76,675.84
-             Q 327.68,706.56 409.6,778.24 Z"
-          fill="url(#leafGrad)" opacity="0.9"/>
-    <path d="M 614.4,778.24
-             Q 737.28,757.76 778.24,675.84
-             Q 696.3199999999999,706.56 614.4,778.24 Z"
-          fill="url(#leafGrad)" opacity="0.9"/>
+    <!-- Leaves behind flower -->
+    <path d="M 430.08,501.76
+            Q 326.89,366.13 160.65,403.70
+            Q 263.85,539.33 430.08,501.76 Z"
+          fill="url(#leafGrad)" opacity="0.92"/>
+    <path d="M 593.92,501.76
+            Q 760.15,539.33 863.35,403.70
+            Q 697.11,366.13 593.92,501.76 Z"
+          fill="url(#leafGrad)" opacity="0.92"/>
+    <path d="M 471.04,573.44
+            Q 453.55,441.08 326.23,400.87
+            Q 343.73,533.23 471.04,573.44 Z"
+          fill="url(#leafGrad)" opacity="0.8"/>
+    <path d="M 552.96,573.44
+            Q 680.27,533.23 697.77,400.87
+            Q 570.45,441.08 552.96,573.44 Z"
+          fill="url(#leafGrad)" opacity="0.8"/>
 
-    <!-- Back petals (offset by 36°) -->
-    <path d="M 550.08,437.34
-          Q 661.62,375.29 706.41,182.98
-          Q 537.35,285.01 512.80,410.26
-          Z M 536.34,482.69
-          Q 629.82,569.59 826.56,552.77
-          Q 677.29,423.51 550.58,438.87
-          Z M 488.96,483.64
-          Q 435.20,599.40 512.00,781.31
-          Q 588.80,599.40 535.04,483.64
-          Z M 473.42,438.87
-          Q 346.71,423.51 197.44,552.77
-          Q 394.18,569.59 487.66,482.69
-          Z M 511.20,410.26
-          Q 486.65,285.01 317.59,182.98
-          Q 362.38,375.29 473.92,437.34
-          Z" fill="url(#backPetalGrad)" opacity="0.92"
-          stroke="#E8A080" stroke-width="2.048" stroke-opacity="0.3"/>
+    <!-- Leaf veins -->
+    <line x1="430.08" y1="501.76" x2="163.83999999999997" y2="399.36"
+          stroke="#2E5030" stroke-width="2.048" opacity="0.4"/>
+    <line x1="593.92" y1="501.76" x2="860.1600000000001" y2="399.36"
+          stroke="#2E5030" stroke-width="2.048" opacity="0.4"/>
 
-    <!-- Main petals -->
-    <path d="M 541.18,411.65
-          Q 609.28,275.46 512.00,61.44
-          Q 414.72,275.46 482.82,411.65
-          Z M 558.03,466.29
-          Q 708.59,488.97 882.08,330.32
-          Q 648.47,303.93 539.99,410.78
-          Z M 511.26,499.19
-          Q 536.22,649.40 740.72,765.36
-          Q 693.62,535.04 558.48,464.89
-          Z M 465.52,464.89
-          Q 330.38,535.04 283.28,765.36
-          Q 487.78,649.40 512.74,499.19
-          Z M 484.01,410.78
-          Q 375.53,303.93 141.92,330.32
-          Q 315.41,488.97 465.97,466.29
-          Z" fill="url(#petalGrad)" opacity="1"
-          stroke="#D88060" stroke-width="2.56" stroke-opacity="0.35"
-          filter="url(#petalGlow)"/>
+    <!-- White petals -->
+    <path d="M 544.10,410.01
+            C 633.99,264.70 621.15,112.64 512.00,112.64
+            C 402.85,112.64 390.01,264.70 479.90,410.01
+            Z M 560.49,468.56
+            C 726.46,509.15 867.11,449.94 833.38,346.14
+            C 799.65,242.33 651.06,277.11 540.65,407.50
+            Z M 509.86,502.24
+            C 522.55,672.62 622.32,788.10 710.62,723.94
+            C 798.93,659.79 719.93,529.22 561.81,464.50
+            Z M 462.19,464.50
+            C 304.07,529.22 225.07,659.79 313.38,723.94
+            C 401.68,788.10 501.45,672.62 514.14,502.24
+            Z M 483.35,407.50
+            C 372.94,277.11 224.35,242.33 190.62,346.14
+            C 156.89,449.94 297.54,509.15 463.51,468.56
+            Z" fill="url(#petalGrad)"
+          stroke="#E0A080" stroke-width="3.072" stroke-opacity="0.25"/>
 
-    <!-- Petal shading at base for depth -->
-    <circle cx="512" cy="450.56" r="133.12" fill="url(#petalShade)" opacity="0.5"/>
+    <!-- Petal shadow near center for depth -->
+    <circle cx="512" cy="450.56" r="122.88" fill="url(#petalShade)" opacity="0.6"/>
+
+    <!-- Stamens radiating from center -->
+    <line x1="537.60" y1="450.56" x2="588.80" y2="450.56"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="588.80" cy="450.56" r="7.17" fill="#E89010"/>
+    <line x1="536.73" y1="457.19" x2="594.10" y2="472.56"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="594.10" cy="472.56" r="7.17" fill="#E89010"/>
+    <line x1="534.17" y1="463.36" x2="592.70" y2="497.15"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="592.70" cy="497.15" r="7.17" fill="#E89010"/>
+    <line x1="530.10" y1="468.66" x2="566.31" y2="504.87"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="566.31" cy="504.87" r="7.17" fill="#E89010"/>
+    <line x1="524.80" y1="472.73" x2="554.50" y2="524.17"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="554.50" cy="524.17" r="7.17" fill="#E89010"/>
+    <line x1="518.63" y1="475.29" x2="536.12" y2="540.57"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="536.12" cy="540.57" r="7.17" fill="#E89010"/>
+    <line x1="512.00" y1="476.16" x2="512.00" y2="527.36"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="512.00" cy="527.36" r="7.17" fill="#E89010"/>
+    <line x1="505.37" y1="475.29" x2="490.00" y2="532.66"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="490.00" cy="532.66" r="7.17" fill="#E89010"/>
+    <line x1="499.20" y1="472.73" x2="465.41" y2="531.26"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="465.41" cy="531.26" r="7.17" fill="#E89010"/>
+    <line x1="493.90" y1="468.66" x2="457.69" y2="504.87"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="457.69" cy="504.87" r="7.17" fill="#E89010"/>
+    <line x1="489.83" y1="463.36" x2="438.39" y2="493.06"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="438.39" cy="493.06" r="7.17" fill="#E89010"/>
+    <line x1="487.27" y1="457.19" x2="421.99" y2="474.68"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="421.99" cy="474.68" r="7.17" fill="#E89010"/>
+    <line x1="486.40" y1="450.56" x2="435.20" y2="450.56"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="435.20" cy="450.56" r="7.17" fill="#E89010"/>
+    <line x1="487.27" y1="443.93" x2="429.90" y2="428.56"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="429.90" cy="428.56" r="7.17" fill="#E89010"/>
+    <line x1="489.83" y1="437.76" x2="431.30" y2="403.97"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="431.30" cy="403.97" r="7.17" fill="#E89010"/>
+    <line x1="493.90" y1="432.46" x2="457.69" y2="396.25"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="457.69" cy="396.25" r="7.17" fill="#E89010"/>
+    <line x1="499.20" y1="428.39" x2="469.50" y2="376.95"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="469.50" cy="376.95" r="7.17" fill="#E89010"/>
+    <line x1="505.37" y1="425.83" x2="487.88" y2="360.55"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="487.88" cy="360.55" r="7.17" fill="#E89010"/>
+    <line x1="512.00" y1="424.96" x2="512.00" y2="373.76"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="512.00" cy="373.76" r="7.17" fill="#E89010"/>
+    <line x1="518.63" y1="425.83" x2="534.00" y2="368.46"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="534.00" cy="368.46" r="7.17" fill="#E89010"/>
+    <line x1="524.80" y1="428.39" x2="558.59" y2="369.86"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="558.59" cy="369.86" r="7.17" fill="#E89010"/>
+    <line x1="530.10" y1="432.46" x2="566.31" y2="396.25"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="566.31" cy="396.25" r="7.17" fill="#E89010"/>
+    <line x1="534.17" y1="437.76" x2="585.61" y2="408.06"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="585.61" cy="408.06" r="7.17" fill="#E89010"/>
+    <line x1="536.73" y1="443.93" x2="602.01" y2="426.44"
+            stroke="#F4B800" stroke-width="3.58" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="602.01" cy="426.44" r="7.17" fill="#E89010"/>
 
     <!-- Center disc -->
-    <circle cx="512" cy="450.56" r="66.56" fill="url(#centerGrad)"/>
-
-    <!-- Stamens (tiny dots around center) -->
-    <circle cx="550.91" cy="450.56" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="539.51" cy="478.07" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="512.00" cy="489.47" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="484.49" cy="478.07" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="473.09" cy="450.56" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="484.49" cy="423.05" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="512.00" cy="411.65" r="9.22" fill="#E89020" opacity="0.85"/>
-    <circle cx="539.51" cy="423.05" r="9.22" fill="#E89020" opacity="0.85"/>
-
-    <!-- Center highlight -->
-    <circle cx="496.64" cy="432.128" r="28.672" fill="#FFF4B0" opacity="0.7"/>
-    <circle cx="491.52" cy="428.032" r="12.288" fill="#FFFFFF" opacity="0.8"/>
+    <circle cx="512" cy="450.56" r="38.912" fill="url(#centerGrad)"/>
+    <circle cx="503.808" cy="440.32" r="18.432" fill="#FFF4B0" opacity="0.8"/>
+    <circle cx="499.712" cy="436.224" r="8.192" fill="#FFFFFF" opacity="0.9"/>
   </g>
 
-  <text x="512" y="880.64"
+  <text x="512" y="901.12"
         font-family="Georgia, 'Times New Roman', serif"
-        font-size="79.872"
+        font-size="81.92"
         font-weight="300"
         font-style="italic"
         fill="#FFFFFF"

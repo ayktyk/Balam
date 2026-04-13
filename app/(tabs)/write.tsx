@@ -299,18 +299,40 @@ export default function WriteScreen() {
       }
     }
 
+    const MAX_PHOTOS = 5;
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+
+    if (remainingSlots <= 0) {
+      Alert.alert('Limit', `En fazla ${MAX_PHOTOS} fotoğraf ekleyebilirsin.`);
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 5,
+      // Web'de selectionLimit bazı tarayıcılarda çoklu seçimi kısıtlıyor,
+      // bu yüzden web'de limit verme — kontrolü aşağıda manuel yapıyoruz.
+      ...(Platform.OS !== 'web' ? { selectionLimit: remainingSlots } : {}),
     });
 
     if (result.canceled || !result.assets?.length) {
       return;
     }
 
-    setSelectedPhotos(result.assets.map(toSelectedPhoto));
+    const newPhotos = result.assets
+      .slice(0, remainingSlots)
+      .map((asset, index) => toSelectedPhoto(asset, selectedPhotos.length + index));
+
+    // Önceki fotoları koruyarak ekle (overwrite değil)
+    setSelectedPhotos((current) => [...current, ...newPhotos]);
+
+    if (result.assets.length > remainingSlots) {
+      Alert.alert(
+        'Bazı fotoğraflar atlandı',
+        `En fazla ${MAX_PHOTOS} fotoğraf ekleyebilirsin. İlk ${remainingSlots} tanesi eklendi.`
+      );
+    }
   }
 
   async function handleStartRecording() {
