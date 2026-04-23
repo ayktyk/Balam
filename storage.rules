@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Storage yollari: entries/{familyId}/{userId}/{dosyaAdi}
+// (lib/storage.ts icinde bu pattern kullaniliyor)
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ------- entries/{familyId}/{userId}/{dosya} -------
+    // Fotograflar ve ses kayitlari bu yola yukleniyor.
+    match /entries/{familyId}/{userId}/{fileName=**} {
+
+      // OKUMA: Giris yapmis ve kendi ailesinin dosyasi olan herkes okuyabilir.
+      // Firestore'dan familyId'yi get ile cekiyoruz.
+      allow read: if request.auth != null
+                     && familyId == firestore.get(
+                          /databases/(default)/documents/users/$(request.auth.uid)
+                        ).data.familyId;
+
+      // YAZMA: Sadece dosyanin sahibi (userId == kendi uid'i)
+      // VE o dosyanin ait oldugu aile = kendi ailesi.
+      allow write: if request.auth != null
+                      && request.auth.uid == userId
+                      && familyId == firestore.get(
+                           /databases/(default)/documents/users/$(request.auth.uid)
+                         ).data.familyId
+                      // Max 20 MB dosya (fotograf ve ses icin genis limit)
+                      && request.resource.size < 20 * 1024 * 1024;
+    }
+
+    // Diger tum yollar: varsayilan olarak reddet.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

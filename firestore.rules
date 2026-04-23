@@ -2,59 +2,102 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Yardımcı fonksiyonlar
+
+    // ------- Yardimcilar -------
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    function getFamilyId() {
-      return getUserData().familyId;
+
+    // users/{uid} dokumani var mi?
+    // (Yeni kayit olmus ama henuz setup'i bitirmemis kullanicilar icin guvenlik)
+    function hasUserDoc() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Kullanıcı profilleri
+    // Giris yapmis kullanicinin familyId'si. users dokumani yoksa null doner.
+    function myFamilyId() {
+      return hasUserDoc()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId
+        : null;
+    }
+
+    // Kullanici verilen familyId'nin uyesi mi?
+    // (members alt koleksiyonunda kendi uid'i varsa uyedir)
+    function isFamilyMember(familyId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+
+    // ------- users -------
+    // Herkes baska kullanicilarin display name/avatar gibi temel bilgilerini
+    // okuyabilir (aile uyelerinin isimlerini gosterebilmek icin).
+    // Yazma sadece kendi profiline.
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update, delete: if isOwner(userId);
     }
 
-    // Aileler
+    // ------- families -------
     match /families/{familyId} {
-      allow read: if isAuthenticated() && (
-        exists(/databases/$(database)/documents/families/{familyId}/members/$(request.auth.uid)) ||
-        getFamilyId() == familyId
-      );
-      allow write: if isAuthenticated() && exists(/databases/$(database)/documents/families/{familyId}/members/$(request.auth.uid));
-      
-      // Aile üyeleri alt koleksiyonu
+      // OKUMA: Authenticated herkes okuyabilir.
+      // Neden: "Aileye Katil" akisinda, yeni kullanici henuz uye degilken
+      // kodun gecerli bir aileye ait oldugunu dogrulamak icin dokumani
+      // okumak zorunda. familyId zaten Firestore'un uretttigi 20 karakterlik
+      // rastgele ID — tahmin edilemez, brute-force pratikte imkansiz.
+      allow read: if isAuthenticated();
+
+      // OLUSTURMA: Oturum acik olan herkes yeni aile kurabilir.
+      allow create: if isAuthenticated();
+
+      // GUNCELLEME / SILME: Sadece aile uyeleri.
+      allow update, delete: if isFamilyMember(familyId);
+
+      // ------- families/{familyId}/members/{userId} -------
       match /members/{memberId} {
-        allow read: if isAuthenticated() && (getFamilyId() == familyId || isOwner(memberId));
-        allow write: if isAuthenticated() && isOwner(memberId);
+        // OKUMA: Aile uyeleri tum listeyi gorebilir;
+        // kisi kendi uyelik dokumanini da okuyabilir (join sonrasi kontrol).
+        allow read: if isFamilyMember(familyId) || isOwner(memberId);
+
+        // OLUSTURMA: Kisi sadece KENDI uyelik dokumanini ekleyebilir.
+        // Bu davet akisinin kalbidir: yeni kisi families/{id}/members/{kendi-uid} yazar.
+        allow create: if isOwner(memberId);
+
+        // GUNCELLEME / SILME: Sadece kendi dokumanin uzerinde.
+        allow update, delete: if isOwner(memberId);
       }
     }
 
-    // Anılar (Entries)
+    // ------- entries (aniler, mektuplar, kapsuller) -------
     match /entries/{entryId} {
-      // Okuma izni: Aile üyesiysen oku
-      allow read: if isAuthenticated() && (
-        resource == null || resource.data.familyId == getFamilyId()
-      );
-      
-      // Yazma izni: Aile üyesiysen ve kendi familyId'ni yazıyorsan
-      allow create: if isAuthenticated() && request.resource.data.familyId == getFamilyId();
-      
-      // Güncelleme/Silme izni: Kendi anınsa ve hala aynı aileye aitse
-      allow update, delete: if isAuthenticated() && 
-                             resource.data.authorId == request.auth.uid &&
-                             resource.data.familyId == getFamilyId();
+      // OKUMA: Sadece ayni aileden olanlar okuyabilir.
+      allow read: if isAuthenticated()
+                     && myFamilyId() != null
+                     && resource.data.familyId == myFamilyId();
+
+      // OLUSTURMA: Kullanici sadece kendi aile ID'sine ve kendi author ID'sine
+      // sahip bir kayit yaratabilir (baskasinin adina yazamaz).
+      allow create: if isAuthenticated()
+                       && myFamilyId() != null
+                       && request.resource.data.familyId == myFamilyId()
+                       && request.resource.data.authorId == request.auth.uid;
+
+      // GUNCELLEME / SILME: Sadece yazari, kendi ailesindeki kayit icin.
+      // Ayrica aile ID'si ve author ID'si degistirilemez (immutable alanlar).
+      allow update: if isAuthenticated()
+                       && resource.data.authorId == request.auth.uid
+                       && resource.data.familyId == myFamilyId()
+                       && request.resource.data.authorId == resource.data.authorId
+                       && request.resource.data.familyId == resource.data.familyId;
+
+      allow delete: if isAuthenticated()
+                       && resource.data.authorId == request.auth.uid
+                       && resource.data.familyId == myFamilyId();
     }
   }
 }
