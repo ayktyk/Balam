@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAuth, Auth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
@@ -20,7 +26,19 @@ let _initialized = false;
 function init() {
   if (_initialized) return;
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  _db = getFirestore(app);
+  try {
+    // Kalıcı önbellek: anılar cihazda saklanır, açılışta anında gelir,
+    // çevrimdışıyken de okunur. Çoklu sekme yöneticisi: Safari sekmesi +
+    // ana ekran PWA'sı aynı anda açıkken çakışmayı önler.
+    _db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    // IndexedDB açılamazsa (ör. gizli mod) eski davranışa sessizce dön.
+    _db = getFirestore(app);
+  }
   _storage = getStorage(app);
   _auth = getAuth(app);
   // PWA'da oturum kaliciligi: kapansa bile giris kalmali
