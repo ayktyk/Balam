@@ -219,6 +219,7 @@ export default function FeedScreen() {
 
         // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
         const data = allData.filter((entry) => {
+          if (entry.deletedAt) return false; // çöp kutusundakiler feed'de gizli
           if (!entry.isPrivate) return true;
           if (isChild) return true; // Yasemin hepsini gorebilir
           return entry.authorId === user?.uid; // Ebeveyn sadece kendisininkini gorur
@@ -265,6 +266,7 @@ export default function FeedScreen() {
 
       // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
       const data = allData.filter((entry) => {
+        if (entry.deletedAt) return false; // çöp kutusundakiler feed'de gizli
         if (!entry.isPrivate) return true;
         if (isChild) return true;
         return entry.authorId === user?.uid;

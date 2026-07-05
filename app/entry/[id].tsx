@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { deleteDoc, doc, getDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -129,15 +129,15 @@ export default function EntryDetailScreen() {
     if (Platform.OS === 'web') {
       return Promise.resolve(
         window.confirm(
-          'Bu anıyı silmek istediğinden emin misin? Bu işlem geri alınamaz.'
+          'Bu anı çöp kutusuna taşınacak. 30 gün içinde Ayarlar → Çöp Kutusu bölümünden geri alabilirsin. Devam edilsin mi?'
         )
       );
     }
 
     return new Promise<boolean>((resolve) => {
       Alert.alert(
-        'Anıyı sil',
-        'Bu anı kalıcı olarak silinecek. Devam etmek istiyor musun?',
+        'Çöp kutusuna taşı',
+        'Bu anı çöp kutusuna taşınacak. 30 gün içinde geri alabilirsin.',
         [
           {
             text: 'İptal',
@@ -145,15 +145,11 @@ export default function EntryDetailScreen() {
             onPress: () => resolve(false),
           },
           {
-            text: 'Sil',
+            text: 'Taşı',
             style: 'destructive',
             onPress: () => resolve(true),
           },
-        ],
-        {
-          cancelable: true,
-          onDismiss: () => resolve(false),
-        }
+        ]
       );
     });
   }
@@ -231,7 +227,8 @@ export default function EntryDetailScreen() {
     }
 
     try {
-      await deleteDoc(doc(db, 'entries', id));
+      // KALICI SİLME YOK: çöp kutusuna taşı (deletedAt işaretle)
+      await updateDoc(doc(db, 'entries', id), { deletedAt: Timestamp.now() });
       router.back();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bir hata oldu.';
