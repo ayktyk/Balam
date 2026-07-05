@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -32,6 +33,48 @@ export default function LoginScreen() {
       window.alert(`${title}: ${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  }
+
+  function showInfo(title: string, message: string) {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+
+  async function handleForgotPassword() {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      showError(
+        'Şifre sıfırlama',
+        'Önce yukarıya e-posta adresini yaz, sonra tekrar "Şifremi unuttum"a dokun.'
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      showInfo(
+        'E-posta gönderildi',
+        'Şifre sıfırlama bağlantısı gönderildi. Gelen kutunu ve spam klasörünü kontrol et.'
+      );
+    } catch (error) {
+      const code = (error as { code?: string }).code ?? '';
+      const messages: Record<string, string> = {
+        'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı.',
+        'auth/invalid-email': 'E-posta adresi geçersiz görünüyor.',
+        'auth/too-many-requests':
+          'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+      };
+      showError(
+        'Şifre sıfırlama',
+        messages[code] ?? 'Bağlantı gönderilemedi. İnternetini kontrol edip tekrar dene.'
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -126,6 +169,12 @@ export default function LoginScreen() {
             secureTextEntry
             editable={!loading}
           />
+
+          {!isRegister && (
+            <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+              <Text style={styles.forgotText}>Şifremi unuttum</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -308,6 +357,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.ui,
     marginTop: SPACING.sm,
+  },
+  forgotText: {
+    color: COLORS.inkLight,
+    fontSize: 13,
+    fontFamily: FONTS.ui,
+    textAlign: 'right',
+    textDecorationLine: 'underline',
   },
   yaseminButton: {
     marginTop: SPACING.lg,
