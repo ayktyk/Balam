@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface UserProfile {
@@ -25,23 +25,37 @@ export function useAuth(): AuthState {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const profileDoc = await getDoc(doc(db, 'users', user.uid));
-          const profile = profileDoc.exists()
-            ? (profileDoc.data() as UserProfile)
+    let unsubProfile: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      // Önceki kullanıcının profil dinleyicisini kapat
+      unsubProfile?.();
+      unsubProfile = undefined;
+
+      if (!user) {
+        setState({ user: null, profile: null, loading: false });
+        return;
+      }
+
+      // Önbellekten anında gelir, sunucudan güncellenir
+      unsubProfile = onSnapshot(
+        doc(db, 'users', user.uid),
+        (snap) => {
+          const profile = snap.exists()
+            ? (snap.data() as UserProfile)
             : null;
           setState({ user, profile, loading: false });
-        } catch {
+        },
+        () => {
           setState({ user, profile: null, loading: false });
         }
-      } else {
-        setState({ user: null, profile: null, loading: false });
-      }
+      );
     });
 
-    return unsubscribe;
+    return () => {
+      unsubProfile?.();
+      unsubAuth();
+    };
   }, []);
 
   return state;
