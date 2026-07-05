@@ -25,6 +25,9 @@ export interface Entry {
   tags: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  // Çöp kutusu: doluysa anı silinmiş sayılır, 30 gün geri alınabilir.
+  // Eski kayıtlarda alan yoktur — yokluk "aktif" demektir. Migration YOK.
+  deletedAt?: Timestamp | null;
 }
 
 export interface Family {
