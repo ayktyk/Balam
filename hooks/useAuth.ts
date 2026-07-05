@@ -41,6 +41,11 @@ export function useAuth(): AuthState {
       unsubProfile = onSnapshot(
         doc(db, 'users', user.uid),
         (snap) => {
+          if (!snap.exists() && snap.metadata.fromCache) {
+            // Önbellekte profil yok (ör. ilk açılış) — yanlış "profil yok"
+            // kararı vermemek için sunucu cevabını bekle, loading sürsün.
+            return;
+          }
           const profile = snap.exists()
             ? (snap.data() as UserProfile)
             : null;
