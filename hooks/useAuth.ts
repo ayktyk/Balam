@@ -37,9 +37,13 @@ export function useAuth(): AuthState {
         return;
       }
 
-      // Önbellekten anında gelir, sunucudan güncellenir
+      // Önbellekten anında gelir, sunucudan güncellenir.
+      // includeMetadataChanges ŞART: sunucunun "doküman gerçekten yok"
+      // onayı yalnızca fromCache=false metadata değişikliğiyle gelir;
+      // bu seçenek olmadan o olay bastırılır ve loading sonsuza kadar sürer.
       unsubProfile = onSnapshot(
         doc(db, 'users', user.uid),
+        { includeMetadataChanges: true },
         (snap) => {
           if (!snap.exists() && snap.metadata.fromCache) {
             // Önbellekte profil yok (ör. ilk açılış) — yanlış "profil yok"
@@ -51,7 +55,11 @@ export function useAuth(): AuthState {
             : null;
           setState({ user, profile, loading: false });
         },
-        () => {
+        (error) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log('Profil dinleme hatası:', error);
+          }
           setState({ user, profile: null, loading: false });
         }
       );
