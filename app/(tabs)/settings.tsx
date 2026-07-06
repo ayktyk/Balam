@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { Alert, ScrollView, View, Text, TouchableOpacity, StyleSheet, Platform, Switch, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import { doc, getDoc, updateDoc, getDocs, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
+import { createBackupZip, BackupProgress } from '../../lib/backup';
 import { SPACING, RADIUS, SHADOWS, FONTS } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { THEMES } from '../../constants/themes';
@@ -22,6 +21,7 @@ export default function SettingsScreen() {
   const [familyData, setFamilyData] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
 
   useEffect(() => {
     async function fetchFamily() {
@@ -62,132 +62,52 @@ export default function SettingsScreen() {
     }
   }
 
-  function buildHtmlExport(entries: any[], familyName: string) {
-    const typeLabels: Record<string, string> = {
-      letter: 'Mektup',
-      memory: 'Anı',
-      milestone: 'Adım',
-      voice: 'Ses Kaydı',
-    };
+  async function handleFullBackup() {
+    if (!profile?.familyId || !user) return;
 
-    const entryCards = entries.map((e) => {
-      const date = e.entryDate
-        ? new Date(e.entryDate).toLocaleDateString('tr-TR', {
-            day: 'numeric', month: 'long', year: 'numeric', weekday: 'long',
-          })
-        : '';
-
-      const photos = (e.photoUrls || [])
-        .map((url: string) => `<img src="${url}" style="max-width:100%;border-radius:12px;margin:8px 0;" />`)
-        .join('');
-
-      const audio = e.voiceUrl
-        ? `<div style="margin:8px 0;"><audio controls src="${e.voiceUrl}" style="width:100%;"></audio></div>`
-        : '';
-
-      const badge = e.isCapsule ? '<span style="background:#8B7355;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Zaman Kapsülü</span> ' : '';
-      const privateBadge = e.isPrivate ? '<span style="background:#C9A96E;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;">Gizli Mektup</span> ' : '';
-
-      return `
-        <div style="background:#fff;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <span style="font-size:20px;">${e.authorEmoji || '🌿'}</span>
-            <strong>${e.authorName || ''}</strong>
-            <span style="color:#6B5B45;font-size:13px;margin-left:auto;">${typeLabels[e.type] || ''}</span>
-          </div>
-          <div style="color:#6B5B45;font-size:13px;margin-bottom:12px;">${date}${e.yaseminAgeLabel ? ' · ' + e.yaseminAgeLabel : ''}</div>
-          ${badge}${privateBadge}
-          ${e.title ? `<h3 style="margin:8px 0 4px;font-family:Georgia,serif;">${e.title}</h3>` : ''}
-          ${photos}
-          ${audio}
-          <div style="white-space:pre-wrap;line-height:1.7;font-family:Georgia,serif;">${e.body || ''}</div>
-        </div>`;
-    }).join('');
-
-    const now = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-    return `<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Balam — ${familyName}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #F5F0E8; font-family: -apple-system, 'Segoe UI', sans-serif; color: #2C2416; padding: 20px; max-width: 680px; margin: 0 auto; }
-    h1 { font-family: Georgia, serif; text-align: center; margin: 32px 0 4px; }
-    .subtitle { text-align: center; color: #6B5B45; margin-bottom: 32px; font-size: 14px; }
-    img { display: block; }
-    audio { border-radius: 8px; }
-  </style>
-</head>
-<body>
-  <h1>Balam</h1>
-  <div class="subtitle">${familyName} · ${entries.length} anı · ${now} tarihinde oluşturuldu</div>
-  ${entryCards}
-  <div style="text-align:center;color:#6B5B45;font-size:12px;padding:32px 0;">
-    Balam ile oluşturuldu
-  </div>
-</body>
-</html>`;
-  }
-
-  async function handleExport() {
-    if (!profile?.familyId) return;
+    if (Platform.OS !== 'web') {
+      Alert.alert('Bilgi', 'Tam yedek şimdilik web sürümünde (tarayıcı / ana ekran uygulaması) alınabiliyor.');
+      return;
+    }
 
     setExporting(true);
+    setBackupProgress(null);
     try {
-      const q = query(
-        collection(db, 'entries'),
-        where('familyId', '==', profile.familyId),
-        orderBy('entryDate', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
-      const entries = snapshot.docs.map(docSnapshot => {
-        const data = docSnapshot.data();
-        return {
-          id: docSnapshot.id,
-          ...data,
-          entryDate: (data as any).entryDate?.toDate?.()?.toISOString() || null,
-          createdAt: (data as any).createdAt?.toDate?.()?.toISOString() || null,
-          updatedAt: (data as any).updatedAt?.toDate?.()?.toISOString() || null,
-        };
+      const { blob, fileName, failedFiles } = await createBackupZip({
+        familyId: profile.familyId,
+        familyName: familyData?.name || 'Balam Ailesi',
+        currentUid: user.uid,
+        onProgress: setBackupProgress,
       });
 
-      const familyName = familyData?.name || 'Balam Ailesi';
-      const html = buildHtmlExport(entries, familyName);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-      if (Platform.OS === 'web') {
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'balam-arsiv.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        const fileUri = `${FileSystem.cacheDirectory}balam-arsiv.html`;
-        await FileSystem.writeAsStringAsync(fileUri, html, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
+      // Hatırlatma için son yedek bilgisini aile kaydına yaz (yalnız bu 2 alan)
+      const now = Timestamp.now();
+      await updateDoc(doc(db, 'families', profile.familyId), {
+        lastBackupAt: now,
+        lastBackupBy: profile.displayName,
+      });
+      setFamilyData((prev: any) => ({ ...prev, lastBackupAt: now, lastBackupBy: profile.displayName }));
 
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(fileUri, {
-            mimeType: 'text/html',
-            dialogTitle: 'Balam Anı Arşivi',
-          });
-        } else {
-          Alert.alert('Hata', 'Paylaşım bu cihazda desteklenmiyor.');
-        }
-      }
+      window.alert(
+        failedFiles.length > 0
+          ? `Yedek indirildi ama ${failedFiles.length} medya dosyası inemedi — ayrıntı ZIP içindeki eksik-dosyalar.txt dosyasında. Yedeği tekrar almayı dene.`
+          : 'Tam yedek indirildi. Dosyayı bilgisayarına veya harici bir diske de kopyalamayı unutma.'
+      );
     } catch (error) {
-      console.error('Export error:', error);
-      Alert.alert('Hata', 'Anılar dışa aktarılamadı.');
+      console.error('Yedek hatası:', error);
+      window.alert('Yedek alınamadı. İnternet bağlantını kontrol edip tekrar dene.');
     } finally {
       setExporting(false);
+      setBackupProgress(null);
     }
   }
 
@@ -210,6 +130,12 @@ export default function SettingsScreen() {
   }
 
   const isParent = profile?.role !== 'child';
+
+  const lastBackupDate: Date | null = familyData?.lastBackupAt?.toDate?.() ?? null;
+  const daysSinceBackup = lastBackupDate
+    ? Math.floor((Date.now() - lastBackupDate.getTime()) / 86400000)
+    : null;
+  const showBackupReminder = isParent && (daysSinceBackup === null || daysSinceBackup > 30);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.contentContainer}>
@@ -340,16 +266,32 @@ export default function SettingsScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Veri</Text>
+
+            {showBackupReminder && (
+              <View style={[styles.card, { backgroundColor: colors.capsuleBg, borderWidth: 1, borderColor: colors.gold, marginBottom: SPACING.md }]}>
+                <Text style={[styles.cardText, { color: colors.ink }]}>
+                  {daysSinceBackup === null
+                    ? 'Henüz hiç tam yedek alınmamış.'
+                    : `Son yedek ${daysSinceBackup} gün önce alınmış.`}
+                </Text>
+                <Text style={[styles.cardHint, { color: colors.inkLight }]}>
+                  Anıların güvende kalması için arada bir tam yedek indir.
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.card, { backgroundColor: colors.creamDark }, exporting && { opacity: 0.7 }]}
-              onPress={handleExport}
+              onPress={handleFullBackup}
               disabled={exporting}
             >
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.cardText, { color: colors.ink }]}>Tüm Anıları Dışa Aktar</Text>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Tam Yedek İndir (ZIP)</Text>
                   <Text style={[styles.cardHint, { color: colors.inkLight }]}>
-                    HTML formatında anıları indir.
+                    {exporting && backupProgress
+                      ? `İndiriliyor: ${backupProgress.done}/${backupProgress.total} dosya`
+                      : 'Tüm yazılar + fotoğraflar + sesler tek dosyada. İçindeki album.html çevrimdışı açılır.'}
                   </Text>
                 </View>
                 {exporting && <ActivityIndicator size="small" color={colors.gold} />}
