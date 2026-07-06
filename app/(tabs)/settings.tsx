@@ -311,6 +311,20 @@ export default function SettingsScreen() {
               </View>
             </TouchableOpacity>
           </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.inkLight }]}>Hesap ve Kurtarma</Text>
+            <View style={[styles.card, { backgroundColor: colors.creamDark }]}>
+              <Text style={[styles.cardText, { color: colors.ink }]}>Anıların bulutta güvende</Text>
+              <Text style={[styles.cardHint, { color: colors.inkLight, marginTop: SPACING.xs, lineHeight: 20 }]}>
+                • Telefon değişince: yeni telefonda uygulama adresini aç, giriş yap — her şey yerinde.{'\n'}
+                • Şifreni unutursan: giriş ekranındaki "Şifremi unuttum" bağlantısını kullan.{'\n'}
+                • Uygulama telefondan silinirse: hiçbir anı kaybolmaz, veriler bulutta durur.{'\n'}
+                • İkinizin de ayrı hesabı var: biri kilitlense diğeri tüm arşive erişir.{'\n'}
+                • Yine de arada bir "Tam Yedek İndir" ile kopyayı bilgisayara al.
+              </Text>
+            </View>
+          </View>
         </>
       ) : (
         <View style={styles.childModeInfo}>
