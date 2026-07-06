@@ -355,6 +355,19 @@ export default function SettingsScreen() {
                 {exporting && <ActivityIndicator size="small" color={colors.gold} />}
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.creamDark, marginTop: SPACING.md }]}
+              onPress={() => router.push('/trash')}
+            >
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.cardText, { color: colors.ink }]}>Çöp Kutusu</Text>
+                  <Text style={[styles.cardHint, { color: colors.inkLight }]}>
+                    Silinen anıları 30 gün içinde geri al.
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         </>
       ) : (
