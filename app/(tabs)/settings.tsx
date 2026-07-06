@@ -87,15 +87,20 @@ export default function SettingsScreen() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // WebKit/iOS indirmeyi geç başlatabilir — URL'i hemen değil, 60 sn sonra iptal et
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
-      // Hatırlatma için son yedek bilgisini aile kaydına yaz (yalnız bu 2 alan)
+      // Hatırlatma için son yedek bilgisini aile kaydına yaz (yalnız bu 2 alan).
+      // await yok — indirme zaten başarılı; çevrimdışında yazma kuyruğa girer,
+      // başarı mesajı bu defter kaydının sonucuna bağlı kalmaz.
       const now = Timestamp.now();
-      await updateDoc(doc(db, 'families', profile.familyId), {
+      updateDoc(doc(db, 'families', profile.familyId), {
         lastBackupAt: now,
-        lastBackupBy: profile.displayName,
+        lastBackupBy: profile.displayName ?? '',
+      }).catch((e) => {
+        if (__DEV__) console.log('lastBackupAt yazılamadı:', e);
       });
-      setFamilyData((prev: any) => ({ ...prev, lastBackupAt: now, lastBackupBy: profile.displayName }));
+      setFamilyData((prev: any) => ({ ...prev, lastBackupAt: now, lastBackupBy: profile.displayName ?? '' }));
 
       window.alert(
         failedFiles.length > 0
@@ -103,7 +108,7 @@ export default function SettingsScreen() {
           : 'Tam yedek indirildi. Dosyayı bilgisayarına veya harici bir diske de kopyalamayı unutma.'
       );
     } catch (error) {
-      console.error('Yedek hatası:', error);
+      if (__DEV__) console.log('Yedek hatası:', error);
       window.alert('Yedek alınamadı. İnternet bağlantını kontrol edip tekrar dene.');
     } finally {
       setExporting(false);
@@ -135,7 +140,9 @@ export default function SettingsScreen() {
   const daysSinceBackup = lastBackupDate
     ? Math.floor((Date.now() - lastBackupDate.getTime()) / 86400000)
     : null;
-  const showBackupReminder = isParent && (daysSinceBackup === null || daysSinceBackup > 30);
+  // !loadingFamily: aile verisi yüklenirken kart yanıp sönmesin
+  const showBackupReminder =
+    isParent && !loadingFamily && (daysSinceBackup === null || daysSinceBackup > 30);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.contentContainer}>
@@ -290,7 +297,9 @@ export default function SettingsScreen() {
                   <Text style={[styles.cardText, { color: colors.ink }]}>Tam Yedek İndir (ZIP)</Text>
                   <Text style={[styles.cardHint, { color: colors.inkLight }]}>
                     {exporting && backupProgress
-                      ? `İndiriliyor: ${backupProgress.done}/${backupProgress.total} dosya`
+                      ? backupProgress.done === backupProgress.total
+                        ? 'Paketleniyor…'
+                        : `İndiriliyor: ${backupProgress.done}/${backupProgress.total} dosya`
                       : 'Tüm yazılar + fotoğraflar + sesler tek dosyada. İçindeki album.html çevrimdışı açılır.'}
                   </Text>
                 </View>

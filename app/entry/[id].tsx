@@ -211,6 +211,9 @@ export default function EntryDetailScreen() {
   }
 
   async function handleDelete() {
+    // Çöpteki anı tekrar silinemez — deletedAt tazelenip 30 günlük sayaç sıfırlanmasın
+    if (entry?.deletedAt) return;
+
     if (!id) {
       return;
     }
@@ -226,14 +229,16 @@ export default function EntryDetailScreen() {
       return;
     }
 
-    try {
-      // KALICI SİLME YOK: çöp kutusuna taşı (deletedAt işaretle)
-      await updateDoc(doc(db, 'entries', id), { deletedAt: Timestamp.now() });
-      router.back();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Bir hata oldu.';
-      showMessage('Silme hatası', message);
-    }
+    // KALICI SİLME YOK: çöp kutusuna taşı (deletedAt işaretle).
+    // await yok — çevrimdışında yazma kalıcı önbellek kuyruğuna girer
+    // (uygulama kapansa bile hayatta kalır); kullanıcı beklemeden geri döner.
+    updateDoc(doc(db, 'entries', id), { deletedAt: Timestamp.now() }).catch((err) => {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.log('Çöpe taşıma hatası:', err);
+      }
+    });
+    router.back();
   }
 
   if (loading) {
@@ -319,6 +324,14 @@ export default function EntryDetailScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.cream }]} contentContainerStyle={styles.content}>
+      {Boolean(entry.deletedAt) && (
+        <View style={[styles.trashBanner, { backgroundColor: colors.capsuleBg, borderColor: colors.gold }]}>
+          <Text style={[styles.trashBannerText, { color: colors.ink }]}>
+            Bu anı çöp kutusunda. Ayarlar → Çöp Kutusu bölümünden geri alabilirsin.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.meta}>
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.authorName}>{entry.authorName}</Text>
@@ -498,9 +511,12 @@ export default function EntryDetailScreen() {
           <TouchableOpacity style={styles.editButton} onPress={startEditing}>
             <Text style={styles.editButtonText}>Düzenle</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Sil</Text>
-          </TouchableOpacity>
+          {/* Çöpteki anıda Sil gösterilmez — geri alma Ayarlar → Çöp Kutusu'nda */}
+          {!entry.deletedAt && (
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Text style={styles.deleteButtonText}>Sil</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </ScrollView>
@@ -528,6 +544,18 @@ const styles = StyleSheet.create({
   meta: {
     alignItems: 'center',
     marginBottom: SPACING.lg,
+  },
+  trashBanner: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  trashBannerText: {
+    fontSize: 14,
+    fontFamily: FONTS.uiMedium,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   icon: {
     fontSize: 40,

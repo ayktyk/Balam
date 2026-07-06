@@ -94,9 +94,21 @@ export default function LoginScreen() {
         router.replace('/');
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Bir hata oluştu.';
-      showError('Hata', message);
+      if (__DEV__) console.log(error);
+      // Ham Firebase hata metni yerine anlaşılır Türkçe mesaj göster
+      const code = (error as { code?: string }).code ?? '';
+      const messages: Record<string, string> = {
+        'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+        'auth/wrong-password': 'E-posta veya şifre hatalı.',
+        'auth/user-not-found': 'E-posta veya şifre hatalı.',
+        'auth/email-already-in-use': 'Bu e-posta ile zaten bir hesap var.',
+        'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+        'auth/invalid-email': 'Geçerli bir e-posta adresi gir.',
+        'auth/too-many-requests':
+          'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+        'auth/network-request-failed': 'Bağlantı sorunu. İnternetini kontrol et.',
+      };
+      showError('Hata', messages[code] ?? 'Giriş yapılamadı. Tekrar dene.');
     } finally {
       setLoading(false);
     }
@@ -171,7 +183,11 @@ export default function LoginScreen() {
           />
 
           {!isRegister && (
-            <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              disabled={loading}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.forgotText}>Şifremi unuttum</Text>
             </TouchableOpacity>
           )}

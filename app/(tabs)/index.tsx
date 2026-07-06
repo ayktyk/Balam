@@ -206,7 +206,12 @@ export default function FeedScreen() {
       entriesQuery,
       { includeMetadataChanges: true },
       (snapshot) => {
-        if (snapshot.metadata.fromCache && snapshot.empty) {
+        // Çevrimdışıyken sunucu onayı gelemez — önbellek kararını kabul et,
+        // gerçekten boş ailede sonsuz spinner olmasın.
+        const isOffline =
+          typeof navigator !== 'undefined' && navigator.onLine === false;
+
+        if (snapshot.metadata.fromCache && snapshot.empty && !isOffline) {
           // Önbellek henüz boş — "hiç anı yok" kararını sunucu doğrulamadan
           // verme; loading sürsün, sunucu onayı (fromCache=false) birazdan gelir.
           return;
