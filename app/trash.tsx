@@ -42,23 +42,45 @@ function confirmDialog(title: string, message: string): Promise<boolean> {
   });
 }
 
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+function byDeletedAtDesc(a: Entry, b: Entry): number {
+  return (
+    (b.deletedAt?.toDate?.()?.getTime?.() ?? 0) -
+    (a.deletedAt?.toDate?.()?.getTime?.() ?? 0)
+  );
+}
+
 export default function TrashScreen() {
-  const { profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { colors } = useTheme();
   const [items, setItems] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Çocuk modu (Yasemin) çöp kutusunu göremez
+  // Oturum yoksa (ör. çıkış sonrası derin bağlantı) girişe dön;
+  // çocuk modu (Yasemin) çöp kutusunu göremez.
   useEffect(() => {
-    if (!authLoading && profile?.role === 'child') {
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/(auth)/login');
+      return;
+    }
+    if (profile?.role === 'child') {
       router.replace('/(tabs)');
     }
-  }, [authLoading, profile?.role]);
+  }, [authLoading, user, profile?.role]);
 
   const load = useCallback(async () => {
-    if (!profile?.familyId) return;
+    const uid = user?.uid;
+    if (!profile?.familyId || !uid) return;
     setLoading(true);
+    setLoadError(false);
+
+    let trashed: Entry[];
     try {
       const snapshot = await getDocs(
         query(
@@ -70,53 +92,77 @@ export default function TrashScreen() {
         id: d.id,
         ...d.data(),
       })) as Entry[];
-
-      const trashed = all.filter((e) => e.deletedAt);
-
-      // 30 günü geçenleri sessizce kalıcı temizle
-      const now = Date.now();
-      const keep: Entry[] = [];
-      for (const e of trashed) {
-        const deletedMs = e.deletedAt?.toDate?.()?.getTime?.() ?? now;
-        if (now - deletedMs > PURGE_MS) {
-          await deleteEntryMedia([...(e.photoUrls || []), e.voiceUrl]);
-          await deleteDoc(doc(db, 'entries', e.id));
-        } else {
-          keep.push(e);
-        }
-      }
-
-      keep.sort(
-        (a, b) =>
-          (b.deletedAt?.toDate?.()?.getTime?.() ?? 0) -
-          (a.deletedAt?.toDate?.()?.getTime?.() ?? 0)
-      );
-      setItems(keep);
+      trashed = all.filter((e) => e.deletedAt);
     } catch (error) {
       if (__DEV__) console.log('Çöp kutusu yükleme hatası:', error);
-    } finally {
+      // Yükleme hatası "boş" demek değildir — hata ekranı göster,
+      // geri alınabilir anılar varken "Çöp kutusu boş" yazma.
+      setLoadError(true);
       setLoading(false);
+      return;
     }
-  }, [profile?.familyId]);
+
+    // 30 günü geçen ve BANA ait olanlar temizlenecek; gerisi listede kalır.
+    // (Kurallar gereği yalnızca yazar silebilir — eşin anısına dokunulmaz.)
+    const now = Date.now();
+    const expiredMine: Entry[] = [];
+    const keep: Entry[] = [];
+    for (const e of trashed) {
+      const deletedMs = e.deletedAt?.toDate?.()?.getTime?.() ?? now;
+      if (now - deletedMs > PURGE_MS && e.authorId === uid) {
+        expiredMine.push(e);
+      } else {
+        keep.push(e);
+      }
+    }
+
+    keep.sort(byDeletedAtDesc);
+    // Liste önce çizilir: temizlik başarısız olsa bile ekran doğru kalır.
+    setItems(keep);
+    setLoading(false);
+
+    // Çevrimdışıyken temizleme atlanır — Firestore yazmaları bağlantı
+    // gelene dek askıda kalır ve akışı sonsuza kadar bekletir.
+    if (isOffline()) return;
+
+    // Sessiz kalıcı temizlik. Her kayıt kendi try/catch'inde:
+    // tek kayıttaki hata diğerlerini ve listeyi etkilemez.
+    for (const e of expiredMine) {
+      try {
+        // Önce doküman, sonra medya: yetim dosya kabul edilebilir,
+        // medyası silinmiş canlı kayıt kabul edilemez.
+        await deleteDoc(doc(db, 'entries', e.id));
+        await deleteEntryMedia([...(e.photoUrls || []), e.voiceUrl]);
+      } catch (error) {
+        if (__DEV__) console.log('Çöp temizleme hatası (tek kayıt):', error);
+      }
+    }
+  }, [profile?.familyId, user?.uid]);
 
   useEffect(() => {
     if (!authLoading && profile?.familyId) load();
   }, [authLoading, profile?.familyId, load]);
 
-  async function handleRestore(entry: Entry) {
-    setBusyId(entry.id);
-    try {
-      await updateDoc(doc(db, 'entries', entry.id), { deletedAt: null });
-      setItems((prev) => prev.filter((i) => i.id !== entry.id));
-    } catch {
+  function handleRestore(entry: Entry) {
+    // İyimser geri alma: listeden hemen düş, yazma arka planda tamamlanır.
+    // Çevrimdışıyken Firestore yazmayı kuyruğa alır, bağlantı gelince işler.
+    setItems((prev) => prev.filter((i) => i.id !== entry.id));
+    updateDoc(doc(db, 'entries', entry.id), { deletedAt: null }).catch(() => {
       if (Platform.OS === 'web') window.alert('Geri alınamadı, tekrar dene.');
       else Alert.alert('Hata', 'Geri alınamadı, tekrar dene.');
-    } finally {
-      setBusyId(null);
-    }
+      setItems((prev) => [...prev, entry].sort(byDeletedAtDesc));
+    });
   }
 
   async function handlePermanentDelete(entry: Entry) {
+    if (busyId) return;
+    if (isOffline()) {
+      const message =
+        'Çevrimdışısın. Kalıcı silme için internet bağlantısı gerekli.';
+      if (Platform.OS === 'web') window.alert(message);
+      else Alert.alert('Hata', message);
+      return;
+    }
     const first = await confirmDialog(
       'Kalıcı sil',
       'Bu anı SONSUZA DEK silinecek ve geri getirilemeyecek. Emin misin?'
@@ -130,8 +176,9 @@ export default function TrashScreen() {
 
     setBusyId(entry.id);
     try {
-      await deleteEntryMedia([...(entry.photoUrls || []), entry.voiceUrl]);
+      // Önce doküman, sonra medya (yetim dosya > medyasız canlı kayıt).
       await deleteDoc(doc(db, 'entries', entry.id));
+      await deleteEntryMedia([...(entry.photoUrls || []), entry.voiceUrl]);
       setItems((prev) => prev.filter((i) => i.id !== entry.id));
     } catch {
       if (Platform.OS === 'web') window.alert('Silinemedi, tekrar dene.');
@@ -145,6 +192,25 @@ export default function TrashScreen() {
     return (
       <View style={[styles.center, { backgroundColor: colors.cream }]}>
         <ActivityIndicator size="large" color={colors.gold} />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.cream }]}>
+        <Text style={styles.emptyEmoji}>⚠️</Text>
+        <Text style={[styles.emptyText, { color: colors.inkLight }]}>
+          Çöp kutusu yüklenemedi. Bağlantını kontrol edip tekrar dene.
+        </Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: colors.gold }]}
+          onPress={load}
+        >
+          <Text style={[styles.retryText, { color: colors.warmWhite }]}>
+            Tekrar dene
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -180,6 +246,8 @@ export default function TrashScreen() {
               )
             : PURGE_DAYS;
           const busy = busyId === item.id;
+          // Kurallar gereği yalnızca yazar geri alabilir/silebilir.
+          const mine = item.authorId === user?.uid;
 
           return (
             <View style={[styles.card, { backgroundColor: colors.creamDark }]}>
@@ -190,26 +258,32 @@ export default function TrashScreen() {
                 {item.authorName} · {deletedStr} tarihinde silindi ·{' '}
                 {remaining} gün sonra kalıcı silinir
               </Text>
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.restoreButton, { backgroundColor: colors.gold }]}
-                  onPress={() => handleRestore(item)}
-                  disabled={busy}
-                >
-                  <Text style={[styles.restoreText, { color: colors.warmWhite }]}>
-                    {busy ? '...' : 'Geri Al'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.deleteButton, { borderColor: colors.danger }]}
-                  onPress={() => handlePermanentDelete(item)}
-                  disabled={busy}
-                >
-                  <Text style={[styles.deleteText, { color: colors.danger }]}>
-                    Kalıcı Sil
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {mine ? (
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={[styles.restoreButton, { backgroundColor: colors.gold }]}
+                    onPress={() => handleRestore(item)}
+                    disabled={busy}
+                  >
+                    <Text style={[styles.restoreText, { color: colors.warmWhite }]}>
+                      {busy ? '...' : 'Geri Al'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteButton, { borderColor: colors.danger }]}
+                    onPress={() => handlePermanentDelete(item)}
+                    disabled={busy}
+                  >
+                    <Text style={[styles.deleteText, { color: colors.danger }]}>
+                      Kalıcı Sil
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={[styles.ownerHint, { color: colors.inkLight }]}>
+                  Bunu yalnızca yazan yönetebilir.
+                </Text>
+              )}
             </View>
           );
         }}
@@ -260,4 +334,17 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   deleteText: { fontSize: 13, fontFamily: FONTS.uiMedium },
+  retryButton: {
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  retryText: { fontSize: 13, fontFamily: FONTS.uiBold },
+  ownerHint: {
+    fontSize: 12,
+    fontFamily: FONTS.ui,
+    fontStyle: 'italic',
+    marginTop: SPACING.md,
+  },
 });
