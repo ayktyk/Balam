@@ -123,16 +123,29 @@ export function useAuth(): AuthState {
         return;
       }
 
-      // Önbellekten anında gelir, sunucudan güncellenir
+      // Önbellekten anında gelir, sunucudan güncellenir.
+      // includeMetadataChanges ŞART: sunucunun "doküman gerçekten yok"
+      // onayı yalnızca fromCache=false metadata değişikliğiyle gelir;
+      // bu seçenek olmadan o olay bastırılır ve loading sonsuza kadar sürer.
       unsubProfile = onSnapshot(
         doc(db, 'users', user.uid),
+        { includeMetadataChanges: true },
         (snap) => {
+          if (!snap.exists() && snap.metadata.fromCache) {
+            // Önbellekte profil yok (ör. ilk açılış) — yanlış "profil yok"
+            // kararı vermemek için sunucu cevabını bekle, loading sürsün.
+            return;
+          }
           const profile = snap.exists()
             ? (snap.data() as UserProfile)
             : null;
           setState({ user, profile, loading: false });
         },
-        () => {
+        (error) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log('Profil dinleme hatası:', error);
+          }
           setState({ user, profile: null, loading: false });
         }
       );
@@ -218,6 +231,41 @@ Aynı effect'in bağımlılık dizisini de güncelle (satır 231):
 // YENİ:
   }, [authLoading, profile?.familyId]);
 ```
+
+- [ ] **Step 2b (PLAN EKİ 2026-07-06): Boş önbellek koruması**
+
+Önbellek boşken (ör. bu güncellemeden sonraki İLK açılış) Firestore, sorgu dinleyicisine
+önce `fromCache: true` + boş sonuç verir; buna güvenilirse "İlk anı" ekranı yine yanıp
+söner. İKİ değişiklik gerekir:
+
+1. `onSnapshot` çağrısına seçenek ekle (sorgu ile callback arasına). Bu ŞART çünkü
+   gerçekten 0 anısı olan bir ailede sunucunun "evet, boş" onayı yalnızca
+   fromCache=false metadata değişikliğiyle gelir; seçenek olmadan o olay bastırılır
+   ve yeni aile sonsuza kadar yükleme ekranında kalır:
+
+```ts
+    const unsubscribe = onSnapshot(
+      entriesQuery,
+      { includeMetadataChanges: true },
+      (snapshot) => {
+```
+
+2. Callback'in EN BAŞINA boş-önbellek koruması ekle:
+
+```ts
+      (snapshot) => {
+        if (snapshot.metadata.fromCache && snapshot.empty) {
+          // Önbellek henüz boş — "hiç anı yok" kararını sunucu doğrulamadan
+          // verme; loading sürsün, sunucu onayı (fromCache=false) birazdan gelir.
+          return;
+        }
+        // ... mevcut allData map'i buradan devam eder
+```
+
+Not: `snapshot.empty` HAM sonuç içindir; istemci tarafı private filtresi sonucu boşalan
+liste bu korumaya takılmaz (o gerçek bir "görünecek anı yok" durumudur).
+Not 2: includeMetadataChanges ile metadata-only ek snapshot'lar gelir; callback zaten
+idempotent (map + filter + setState), fazladan render zararsızdır.
 
 - [ ] **Step 3: Yükleme görünümünü güncelle**
 
@@ -1414,6 +1462,9 @@ Spec'teki elle senaryolar:
 4. "Şifremi unuttum" → e-posta geliyor, yeni şifreyle giriş oluyor.
 5. Deneme anısı sil → Çöp Kutusu'nda → Geri Al → feed'de yerinde.
 6. Yasemin koduyla giriş → çöp kutusu ve silinmişler görünmüyor.
+7. (PLAN EKİ) Kilitlenme regresyonu: yeni deneme hesabı kaydet → kurulum ekranındayken
+   sayfayı yenile → kurulumu tamamlamadan kapat → yeniden aç → kurulum ekranına
+   düşmeli (sonsuz "Anılar yükleniyor" OLMAMALI). Test bitince deneme hesabını sil.
 
 - [ ] **Step 5: Proje hafızasını güncelle**
 
@@ -1428,6 +1479,159 @@ git push
 ```
 
 ---
+
+## Uygulama Sırasında Eklenen Kayıtlar (2026-07-06)
+
+- **CORS doğrulaması (koordinatör, canlı test):** `firebase.storage.cors.json` yalnızca
+  localhost origin'leri içerse de, yedek modülünün kullandığı indirme uç noktası
+  (`firebasestorage.googleapis.com/v0/...?alt=media`) her origin'e
+  `Access-Control-Allow-Origin: *` döndürüyor (curl ile doğrulandı, 2026-07-06).
+  Yani ZIP yedeğin medya fetch'leri üretimde CORS'a takılmaz; cors.json dosyası
+  GCS'nin farklı uç noktaları içindir ve değiştirilmesi gerekmez.
+
+- **Kabul edilen ödünleşim (T3 kalite incelemesi):** Sıcak auth + çevrimdışı + SIFIR anılı
+  aile senaryosunda feed, sunucu onayı gelemediği için spinner'da kalır (bağlantı gelince
+  kendini toparlar). Soğuk-açılış varyantıyla aynı ödünleşim ailesi; canlı ailede
+  (anıları olan) erişilemez yol. Ucuz önlem (guard'da `navigator.onLine === false` ise
+  önbellek kararını kabul et) T9 sonrası "hızlı düzeltmeler" görevinde uygulanacak.
+- **T9 sonrası "hızlı düzeltmeler" görevi (birikmiş inceleme bulguları):**
+  1. `lib/firebase.ts` catch/multi-tab yorumlarının düzeltilmesi (T1 incelemesi: yorumlar
+     davranışı yanlış anlatıyor; işlev doğru).
+  2. ÖNE ALINDI → T8 öncesi yedek düzeltme commit'inde yapılıyor (aşağıdaki kayda bakınız).
+  3. `app/(tabs)/index.tsx` guard'ına çevrimdışı geri-düşüşü (yukarıdaki ödünleşim).
+  4. `app/(auth)/login.tsx` "Şifremi unuttum" dokunma alanı (`hitSlop`) + handleSubmit
+     hata mesajlarının Türkçeleştirilmesi (T4 incelemesi önerisi).
+  5. `app/entry/[id].tsx` — çöpteki anının detay sayfası (T5 kalite incelemesi, Important):
+     `entry.deletedAt` doluysa "Bu anı çöp kutusunda" banner'ı göster ve Sil butonunu
+     gizle/koru (`if (entry?.deletedAt) return;` guard'ı) — aksi halde çöpteki anıya
+     tekrar "Sil" basmak `deletedAt`'i tazeleyip 30 günlük sayacı sıfırlıyor ve yanıltıcı
+     "çöp kutusuna taşınacak" metni gösteriyor. (Çöp ekranı detaya bilerek link veriyor.)
+  6. `app/entry/[id].tsx` handleDelete — çevrimdışında `await updateDoc` hiç çözülmez,
+     `router.back()` çalışmaz, buton tekrar tıklanabilir kalır (T5 kalite incelemesi,
+     Important). Çözüm: iyimser navigasyon — `updateDoc(...).catch(...)` await'siz, ardından
+     hemen `router.back()` (kalıcı IndexedDB önbelleğiyle kuyruktaki yazma uygulama
+     kapansa bile hayatta kalır); ayrıca ham Firebase hata metni yerine genel Türkçe mesaj
+     (+ `__DEV__` log).
+  7. `app/(tabs)/settings.tsx` handleFullBackup (T8 kalite incelemesi, Important — 6'nın ikizi):
+     indirme BAŞARILI olduktan sonra gelen `await updateDoc(lastBackupAt...)` kaldırılır —
+     await'siz `.catch(__DEV__ log)` + iyimser `setFamilyData` + başarı mesajı bağımsız
+     gösterilir. Bugünkü hali: çevrimdışında buton "İndiriliyor" durumunda takılı kalır;
+     yazma reddedilirse inmiş yedeğe rağmen "Yedek alınamadı" denir (en yanlış mesaj).
+     Aynı satıra dokunmuşken `profile.displayName ?? ''` sertleştirmesi.
+  8. `app/(tabs)/settings.tsx` hatırlatma kartına `!loadingFamily` koşulu — aile verisi
+     yüklenirken "Henüz hiç yedek alınmamış" kartının yanıp sönmesini önler (T8, Minor).
+  9. `app/(tabs)/settings.tsx` `URL.revokeObjectURL` — click'ten hemen sonra değil,
+     `setTimeout(..., 60_000)` ile (iOS/WebKit indirme iptali tuzağına ucuz sigorta; T8, Minor).
+     Opsiyonel rötuşlar (aynı dosyaya dokunmuşken, zorunlu değil): catch'te `console.error`
+     yerine `__DEV__` log; progress metninde `done === total` iken "Paketleniyor…".
+  **T10 canlı test listesine ek senaryo (T8 incelemesi):** ZIP indikten hemen sonra ağı kes —
+  başarı mesajı yine görünmeli ve buton normale dönmeli (madde 7'nin doğrulaması).
+
+- **T8 kalite incelemesi sonucu (2026-07-06, commit 3e7a83b):** Onay "with fixes" — kritik yok;
+  indirme-önce-kayıt-sonra sıralaması veri açısından doğru bulundu; tek Important bulgu
+  yukarıda madde 7 olarak hızlı düzeltmelere eklendi (8-9 minör).
+
+- **T5 kalite incelemesi sonucu (2026-07-06, commit 0d7da28):** Onay "with fixes" — kritik yok,
+  veri kaybı riski yok (Timestamp.now() seçimi doğru: latency compensation ile anı feed'den
+  anında düşer; serverTimestamp olsa null görünüp titrerdi). İki Important bulgu yukarıdaki
+  hızlı düzeltmeler listesine 5-6 olarak eklendi. **T10 kontrol listesine eklenecek iki
+  doğrulama:** (a) Task 8 eski `handleExport`'u gerçekten kaldırdı mı (kaldırmadıysa çöpteki
+  anılar eski HTML export'a sızar — tek satır filtre ile kapatılır); (b) detay sayfasındaki
+  "Ayarlar → Çöp Kutusu" metni gerçek navigasyonla eşleşiyor mu (T6 linki ekledi, teyit).
+
+- **T7 kalite incelemesi sonucu (2026-07-06, commit b514757):** Onay "with fixes" — kritik yok.
+  T8 butonu yedeği kullanıcıya açmadan ÖNCE `lib/backup.ts`'e küçük bir düzeltme commit'i:
+  1. Medya fetch'lerine 30 sn zaman aşımı (`AbortSignal.timeout(30_000)`) — tek takılı istek
+     tüm yedeği donduruyordu; abort mevcut catch'e düşer, dosya eksik-dosyalar.txt'ye gider.
+  2. `esc()` yardımcısı ile album.html'deki TÜM kullanıcı verisi interpolasyonlarına HTML kaçışı
+     (title, body, authorName, familyName, yaseminAgeLabel, `src` attribute dahil) —
+     `<` içeren mektup metni albümde sessizce kaybolmasın (asıl risk XSS değil, içerik kaybı).
+  3. Küçükler: medya listesi yorumunun düzeltilmesi (yabancı özel medya DAHİL, çöp medyası
+     HARİÇ — bilinçli ödünleşim, yorumda belirtilsin); dosya adında UTC yerine yerel tarih
+     (`toLocaleDateString('en-CA')`); eksik-dosyalar.txt satırlarına hata nedeni;
+     bellek tavanı notu (~1.5-2 GB medyada tarayıcı sınırı) yorum satırı.
+  4. **T8 uygulayıcısına uyarı:** `jobs.length === 0` (yalnız metinli aile) durumunda
+     `onProgress` hiç ateşlenmez ve `total` 0 olur — ayarlar UI'si `done/total`'ı koşulsuz
+     hesaplamamalı, ilk progress olayını beklememeli.
+  5. **T8 uygulayıcısına ikinci uyarı (düzeltme commit'i aba8522 sonrası):** `BackupResult.failedFiles`
+     elemanları artık ham URL değil, `"url (hata nedeni)"` biçiminde görüntü metnidir —
+     UI'de olduğu gibi gösterilmeli, URL olarak parse edilmemeli/link yapılmamalıdır.
+  6. **Yeniden inceleme sonucu:** Düzeltme commit'i `aba8522` aynı incelemeci tarafından
+     doğrulandı — ONAYLANDI, regresyon yok, T7 kapandı (2026-07-06).
+
+- **T6 kalite incelemesi sonucu (2026-07-06, commit a85f906): BİRLEŞTİRMEDEN ÖNCE DÜZELTME ŞART.**
+  İki kritik, plan kaynaklı kusur (koordinatör rules dosyalarını okuyarak doğruladı):
+  1. **firestore.rules (satır 92-100) yazar-tekeli ↔ çöp ekranı aile-geneli davranıyor:**
+     Eşin anısında purge/`deleteDoc` → `permission-denied` → tek dıştaki catch tüm listeyi
+     boşaltıyor ("Çöp kutusu boş" yazısı, anılar duruyorken). Her açılışta, üretimde sessizce.
+  2. **storage.rules (satır 22-28): `allow write` silmeyi de kapsıyor, silmede
+     `request.resource` null → `deleteObject` HER ZAMAN reddedilir** — "Kalıcı Sil"
+     yalnızca dokümanı siler, fotoğraf/ses Storage'da sonsuza dek kalır (plan Step 6.3
+     manuel testi bugünkü kurallarla geçemez).
+  **Kod-tarafı düzeltme görevi (T9 sonrası, rules'a DOKUNMADAN her durumda gerekli) — app/trash.tsx:**
+  (a) purge döngüsünde madde-başı try/catch; tek hata listeyi asla boşaltmasın; yükleme
+  hatasında yanıltıcı "boş" yerine hata durumu + tekrar dene;
+  (b) purge yalnızca `e.authorId === user.uid` olan kayıtlarda (herkes kendi süresi dolanını
+  temizler; eşinki eşin cihazında temizlenir);
+  (c) "Geri Al"/"Kalıcı Sil" butonları yalnızca kendi anılarında; başkasınınkine
+  "Bunu yalnızca yazan yönetebilir" ipucu;
+  (d) kalıcı silmede sıra TERSİNE: önce `deleteDoc`, sonra medya (yetim dosya > ölü medyalı
+  canlı kayıt — lib/storage.ts'teki ilkenin kendisi);
+  (e) çevrimdışı: geri almada `await` yok (iyimser yerel güncelleme, yazma kuyruğu sonra
+  senkronlar); `navigator.onLine === false` iken purge atlanır; busyId fonksiyon girişinde
+  kontrol; çıkışsız (user=null) derin linkte login'e yönlendirme.
+  **KULLANICI KARARI BEKLEYEN İKİ MADDE (rules dosyaları — kullanıcının çizdiği sınır):**
+  (i) storage.rules'ta `allow write` → `allow create, update` (boyut şartıyla) +
+  `allow delete` (yalnız dosya sahibi) ayrımı — Kalıcı Sil sözünü tutar; deploy T10'da
+  Firebase konsolu/CLI ile (Vercel push'undan ayrı adım);
+  (ii) firestore.rules yetki modeli: yazar-tekeli KALSIN (önerilen, koruyucu) mu,
+  çöpteki kayıtlar için aile-geneli update/delete'e gevşetilsin mi.
+  Karara göre T6-düzeltme commit'inin metinleri ve T10 adımları netleşir.
+  **KULLANICI KARARLARI (2026-07-06, Aykut):**
+  (i) storage.rules düzeltmesi ONAYLANDI — `allow write` → `allow create, update` (boyut şartı)
+  + `allow delete` (yalnız dosya sahibi) ayrılır; commit'lenir ama deploy T10'da Firebase
+  konsolu/CLI ile elle yapılır (Vercel push'u rules'ı YAYINLAMAZ — unutma!);
+  (ii) Yetki modeli: HERKES KENDİ ANISINI yönetir — firestore.rules DEĞİŞMEZ, çöp ekranı
+  koda yazar-kilidi alır;
+  (iii) REHBER.md AYRILIR — NEXUS proje formu `NEXUS-FORM.md` olarak diske (git dışı,
+  .gitignore'a eklenir), REHBER.md yalnız aile rehberi kalır. Hiçbir içerik silinmez.
+  **Uygulama ve yeniden inceleme (2026-07-06):** Üç commit — `db773f8` (trash.tsx düzeltmeleri),
+  `64aee45` (storage.rules ayrımı), `f87afc6` (REHBER ayrımı). Aynı incelemeci yeniden
+  inceledi: **ONAYLANDI** — Kritik 1 tamamen çözüldü; Kritik 2 kural içeriği olarak çözüldü,
+  **YAYIN KAPISI: T10'da `firebase deploy --only storage` (veya konsoldan) yapılmadan
+  kalıcı silme medyayı silemez; plan Step 6.3 manuel testi deploy'dan SONRA koşulmalı.**
+  Kabul edilen taşınan minörler: native tarafta `navigator.onLine` undefined (PWA hedefte
+  sorun değil); eşin süresi dolmuş çöp kaydında "0 gün sonra kalıcı silinir" metni
+  kozmetik olarak fazla acil görünüyor (yalnız yazan açınca temizlenir); istemci saati
+  kalıntı riski (daha önce kabul edildi).
+  (Minör not, kabul edilen risk: `deletedAt` istemci saatiyle yazılır — bozuk saatli cihaz
+  30 gün garantisini kısaltabilir; 2 kişilik ailede kalıntı risk, purge yazar-tekeline
+  indiğinde etki daha da azalır. `Timestamp.now()` tercihi T5 incelemesince UX için doğru
+  bulunmuştu, değiştirilmiyor.)
+
+- **tsc taban çizgisi güncellemesi (T8, commit 3e7a83b sonrası):** Eski export'un
+  `expo-file-system` importu kaldırılınca settings.tsx(5) hatası kayboldu. Yeni taban:
+  **3 hata** — settings.tsx TextInput `disabled` (TS2769), lib/storage.ts Blob.close
+  (TS2339) ×2. Sonraki görevler bu 3'lü sete göre (kimlikle, satır numarasıyla değil)
+  karşılaştırsın. Ayrıca T8, T5 incelemesindeki "eski HTML export çöpteki anıları
+  sızdırır" endişesini eski export'u tamamen kaldırarak kapattı — T10 kontrol maddesi (a)
+  bu commit'le sağlandı.
+
+- **GENEL FİNAL İNCELEMESİ (2026-07-06, BASE d18d8f6 → HEAD 2b8eaaa, 16 commit): YAYINA HAZIR.**
+  7 değişmez ✓ (deleteDoc yalnız trash.tsx; firestore.rules/CORS dokunulmamış; storage.rules
+  yalnız onaylı ayrım; package.json yalnız jszip; migration yok; NEXUS-FORM.md ignore'da).
+  Kritik/Important: SIFIR. Kozmetik 3 not (yayın sonrası isteğe bağlı): (1) hatırlatma kartı
+  guard'ına `!!profile` eklenebilir; (2) milestones dinleyicisine fromCache guard'ı
+  eklenebilir; (3) trash'te çocuk redirect'i öncesi zararsız tek okuma.
+  **T10 canlı test listesine final incelemeden EK 6 senaryo:**
+  (T-a) storage.rules deploy'undan sonra YÜKLEME regresyonu: fotoğraflı+sesli yeni anı
+  kaydet (create/update ayrımı yükleme yolunu da değiştirdi, yalnız silme testi yetmez);
+  (T-b) eşin cihazında çapraz-hesap çöp testi: "Bunu yalnızca yazan yönetebilir" görünür,
+  liste boşalmaz, purge yalnız kendininkini temizler;
+  (T-c) iOS ana ekran PWA'sında ZIP indirmenin Dosyalar'a düştüğü;
+  (T-d) branch öncesi (deletedAt'siz) eski bir anının feed'de görünüp detayının açıldığı;
+  (T-e) çoklu sekme: Safari sekmesi + kurulu PWA aynı anda veri alıyor;
+  (T-f) şifre sıfırlama uçtan uca üretim domaininde.
 
 ## Plan Self-Review Notları
 
