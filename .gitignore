@@ -43,3 +43,6 @@ yarn-error.*
 
 # local AI tooling
 .claude/
+
+# NEXUS project form (local only)
+NEXUS-FORM.md

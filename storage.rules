@@ -17,15 +17,24 @@ service firebase.storage {
                           /databases/(default)/documents/users/$(request.auth.uid)
                         ).data.familyId;
 
-      // YAZMA: Sadece dosyanin sahibi (userId == kendi uid'i)
+      // YAZMA (olusturma/guncelleme): Sadece dosyanin sahibi (userId == kendi uid'i)
       // VE o dosyanin ait oldugu aile = kendi ailesi.
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
                       && request.auth.uid == userId
                       && familyId == firestore.get(
                            /databases/(default)/documents/users/$(request.auth.uid)
                          ).data.familyId
                       // Max 20 MB dosya (fotograf ve ses icin genis limit)
                       && request.resource.size < 20 * 1024 * 1024;
+
+      // SILME: Ayri kural olarak ayrildi, cunku silme isteginde
+      // request.resource null olur ve boyut kosulu tum silmeleri
+      // reddediyordu. Sahiplik ve aile kontrolu ayni, boyut sarti yok.
+      allow delete: if request.auth != null
+                      && request.auth.uid == userId
+                      && familyId == firestore.get(
+                           /databases/(default)/documents/users/$(request.auth.uid)
+                         ).data.familyId;
     }
 
     // Diger tum yollar: varsayilan olarak reddet.

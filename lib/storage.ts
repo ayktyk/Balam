@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './firebase';
 
 const WEB_UPLOAD_TIMEOUT_MS = 30000; // Increased to 30s for web
@@ -137,4 +137,22 @@ export async function uploadAudioAsync(params: {
     fallbackExtension: 'm4a',
     defaultContentType: 'audio/mp4',
   });
+}
+
+/**
+ * Kalıcı silmede anının medya dosyalarını Storage'dan temizler.
+ * Tek dosya hatası tüm işlemi durdurmaz: doküman silinmesi engellenmez,
+ * yetim dosya kalması veri kaybından iyidir (spec: Hata Yönetimi).
+ */
+export async function deleteEntryMedia(
+  urls: Array<string | null | undefined>
+): Promise<void> {
+  for (const url of urls) {
+    if (!url) continue;
+    try {
+      await deleteObject(ref(storage, url));
+    } catch {
+      // dosya zaten yok veya erişilemiyor — yut ve devam et
+    }
+  }
 }

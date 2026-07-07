@@ -51,10 +51,10 @@ export default function MilestonesScreen() {
     const unsubscribe = onSnapshot(
       entriesQuery,
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
+        const data = (snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        })) as Entry[];
+        })) as Entry[]).filter((entry) => !entry.deletedAt);
 
         const milestoneEntries = data.filter(
           (entry) => entry.type === 'milestone'

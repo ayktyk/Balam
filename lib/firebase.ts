@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAuth, Auth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
@@ -20,7 +26,22 @@ let _initialized = false;
 function init() {
   if (_initialized) return;
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  _db = getFirestore(app);
+  try {
+    // persistentLocalCache + persistentMultipleTabManager: Firestore verisi
+    // IndexedDB'de kalıcı tutulur ve bu önbellek açık sekmeler ARASINDA
+    // PAYLAŞILIR (Safari sekmesi + ana ekran PWA'sı aynı önbelleği kullanır).
+    // Anılar cihazda saklanır: açılışta anında gelir, çevrimdışı da okunur.
+    _db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    // Kalıcılık kullanılamıyorsa (ör. gizli mod, desteklemeyen tarayıcı)
+    // düz getFirestore(app)'e dön: varsayılan bellek-içi önbellek,
+    // kalıcı IndexedDB YOK — uygulama yine çalışır, veriler cihazda tutulmaz.
+    _db = getFirestore(app);
+  }
   _storage = getStorage(app);
   _auth = getAuth(app);
   // PWA'da oturum kaliciligi: kapansa bile giris kalmali

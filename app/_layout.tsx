@@ -47,6 +47,13 @@ function ThemedStack() {
             headerBackTitle: 'Geri',
           }}
         />
+        <Stack.Screen
+          name="trash"
+          options={{
+            title: 'Çöp Kutusu',
+            headerBackTitle: 'Geri',
+          }}
+        />
       </Stack>
     </>
   );

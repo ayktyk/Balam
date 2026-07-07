@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -35,6 +36,48 @@ export default function LoginScreen() {
     }
   }
 
+  function showInfo(title: string, message: string) {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+
+  async function handleForgotPassword() {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      showError(
+        'Şifre sıfırlama',
+        'Önce yukarıya e-posta adresini yaz, sonra tekrar "Şifremi unuttum"a dokun.'
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      showInfo(
+        'E-posta gönderildi',
+        'Şifre sıfırlama bağlantısı gönderildi. Gelen kutunu ve spam klasörünü kontrol et.'
+      );
+    } catch (error) {
+      const code = (error as { code?: string }).code ?? '';
+      const messages: Record<string, string> = {
+        'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı.',
+        'auth/invalid-email': 'E-posta adresi geçersiz görünüyor.',
+        'auth/too-many-requests':
+          'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+      };
+      showError(
+        'Şifre sıfırlama',
+        messages[code] ?? 'Bağlantı gönderilemedi. İnternetini kontrol edip tekrar dene.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
       showError('Hata', 'E-posta ve şifre gerekli.');
@@ -51,9 +94,21 @@ export default function LoginScreen() {
         router.replace('/');
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Bir hata oluştu.';
-      showError('Hata', message);
+      if (__DEV__) console.log(error);
+      // Ham Firebase hata metni yerine anlaşılır Türkçe mesaj göster
+      const code = (error as { code?: string }).code ?? '';
+      const messages: Record<string, string> = {
+        'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+        'auth/wrong-password': 'E-posta veya şifre hatalı.',
+        'auth/user-not-found': 'E-posta veya şifre hatalı.',
+        'auth/email-already-in-use': 'Bu e-posta ile zaten bir hesap var.',
+        'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+        'auth/invalid-email': 'Geçerli bir e-posta adresi gir.',
+        'auth/too-many-requests':
+          'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+        'auth/network-request-failed': 'Bağlantı sorunu. İnternetini kontrol et.',
+      };
+      showError('Hata', messages[code] ?? 'Giriş yapılamadı. Tekrar dene.');
     } finally {
       setLoading(false);
     }
@@ -126,6 +181,16 @@ export default function LoginScreen() {
             secureTextEntry
             editable={!loading}
           />
+
+          {!isRegister && (
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              disabled={loading}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.forgotText}>Şifremi unuttum</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -308,6 +373,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.ui,
     marginTop: SPACING.sm,
+  },
+  forgotText: {
+    color: COLORS.inkLight,
+    fontSize: 13,
+    fontFamily: FONTS.ui,
+    textAlign: 'right',
+    textDecorationLine: 'underline',
   },
   yaseminButton: {
     marginTop: SPACING.lg,

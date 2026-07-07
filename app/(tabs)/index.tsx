@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   RefreshControl,
@@ -156,7 +157,7 @@ function EmptyFeedState() {
 }
 
 export default function FeedScreen() {
-  const { profile, user } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const { colors } = useTheme();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -181,6 +182,12 @@ export default function FeedScreen() {
   }
 
   useEffect(() => {
+    if (authLoading) {
+      // Auth çözülmeden feed hakkında karar verme — loading true kalır,
+      // "İlk anı" boş ekranı asla erken görünmez.
+      return;
+    }
+
     if (!profile?.familyId) {
       setEntries([]);
       setLoading(false);
@@ -197,7 +204,19 @@ export default function FeedScreen() {
 
     const unsubscribe = onSnapshot(
       entriesQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
+        // Çevrimdışıyken sunucu onayı gelemez — önbellek kararını kabul et,
+        // gerçekten boş ailede sonsuz spinner olmasın.
+        const isOffline =
+          typeof navigator !== 'undefined' && navigator.onLine === false;
+
+        if (snapshot.metadata.fromCache && snapshot.empty && !isOffline) {
+          // Önbellek henüz boş — "hiç anı yok" kararını sunucu doğrulamadan
+          // verme; loading sürsün, sunucu onayı (fromCache=false) birazdan gelir.
+          return;
+        }
+
         const allData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -205,6 +224,7 @@ export default function FeedScreen() {
 
         // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
         const data = allData.filter((entry) => {
+          if (entry.deletedAt) return false; // çöp kutusundakiler feed'de gizli
           if (!entry.isPrivate) return true;
           if (isChild) return true; // Yasemin hepsini gorebilir
           return entry.authorId === user?.uid; // Ebeveyn sadece kendisininkini gorur
@@ -228,7 +248,7 @@ export default function FeedScreen() {
     );
 
     return unsubscribe;
-  }, [profile?.familyId]);
+  }, [authLoading, profile?.familyId]);
 
   async function onRefresh() {
     if (!profile?.familyId) {
@@ -251,6 +271,7 @@ export default function FeedScreen() {
 
       // Private entry'leri filtrele: yazar kendisi gorebilir, Yasemin hepsini gorebilir
       const data = allData.filter((entry) => {
+        if (entry.deletedAt) return false; // çöp kutusundakiler feed'de gizli
         if (!entry.isPrivate) return true;
         if (isChild) return true;
         return entry.authorId === user?.uid;
@@ -269,10 +290,13 @@ export default function FeedScreen() {
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.cream }]}>
-        <Text style={[styles.emptyText, { color: colors.inkLight }]}>Yükleniyor...</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.cream, flex: 1 }]}>
+        <ActivityIndicator size="large" color={colors.gold} />
+        <Text style={[styles.emptyText, { color: colors.inkLight }]}>
+          Anılar yükleniyor...
+        </Text>
       </View>
     );
   }
