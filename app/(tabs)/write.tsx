@@ -17,7 +17,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { AudioPlayer } from '../../components/AudioPlayer';
+import { DatePickerField } from '../../components/DatePickerField';
 import { db } from '../../lib/firebase';
+import {
+  formatDateInput,
+  parseDateInput,
+  toStartOfDay,
+} from '../../lib/dateInput';
 import { uploadAudioAsync, uploadImageAsync } from '../../lib/storage';
 import { useAuth } from '../../hooks/useAuth';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
@@ -48,43 +54,6 @@ type RecordedVoice = {
   durationMillis: number;
   mimeType?: string | null;
 };
-
-function toStartOfDay(date: Date) {
-  const nextDate = new Date(date);
-  nextDate.setHours(0, 0, 0, 0);
-  return nextDate;
-}
-
-function formatDateInput(date: Date) {
-  const day = `${date.getDate()}`.padStart(2, '0');
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const year = `${date.getFullYear()}`;
-  return `${day}.${month}.${year}`;
-}
-
-function parseDateInput(value: string) {
-  const match = value.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  const [, dayText, monthText, yearText] = match;
-  const day = Number(dayText);
-  const month = Number(monthText);
-  const year = Number(yearText);
-  const parsedDate = new Date(year, month - 1, day);
-
-  if (
-    parsedDate.getFullYear() !== year ||
-    parsedDate.getMonth() !== month - 1 ||
-    parsedDate.getDate() !== day
-  ) {
-    return null;
-  }
-
-  return toStartOfDay(parsedDate);
-}
 
 function isEntryType(value: string | undefined): value is EntryType {
   return (
@@ -185,6 +154,17 @@ export default function WriteScreen() {
     }
 
     if (isEntryType(params.type) && params.type === 'milestone') {
+      // Adımlar ekranından "Doğum" ile gelindiyse tarih doğum gününe sabitlenir,
+      // diğerlerinde bugün öneri olarak dolar.
+      const incomingPreset = getMilestonePreset(
+        typeof params.milestoneTag === 'string' ? params.milestoneTag : null
+      );
+
+      if (incomingPreset?.defaultDate) {
+        setMilestoneDateInput(formatDateInput(incomingPreset.defaultDate));
+        return;
+      }
+
       setMilestoneDateInput(
         (currentValue) => currentValue || formatDateInput(new Date())
       );
@@ -274,6 +254,17 @@ export default function WriteScreen() {
     if (!title.trim() || title === selectedMilestonePreset?.title) {
       setTitle(nextPreset.title);
     }
+
+    // Tarihi kesin olan adımlar (Doğum) seçilince tarih kendiliğinden dolar —
+    // elle yazarken yanlış tarihlenme riski kalmaz.
+    if (nextPreset.defaultDate) {
+      setMilestoneDateInput(formatDateInput(nextPreset.defaultDate));
+      return;
+    }
+
+    setMilestoneDateInput(
+      (currentValue) => currentValue || formatDateInput(new Date())
+    );
   }
 
   function removeSelectedPhoto(photoId: string) {
@@ -621,16 +612,15 @@ export default function WriteScreen() {
             <View style={styles.dateCard}>
               <Text style={styles.dateTitle}>Milestone tarihi</Text>
               <Text style={styles.dateHint}>
-                GG.AA.YYYY formatında gir. Yaş etiketi bu tarihe göre hesaplanır.
+                Takvimden seç ya da rakamları yaz — noktalar kendiliğinden gelir.
+                Yaş etiketi bu tarihe göre hesaplanır.
               </Text>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="23.03.2026"
-                placeholderTextColor={COLORS.inkLight}
+              <DatePickerField
                 value={milestoneDateInput}
-                onChangeText={setMilestoneDateInput}
-                keyboardType="number-pad"
+                onChange={setMilestoneDateInput}
+                colors={colors}
                 editable={!saving}
+                maxDate={new Date()}
               />
               <View style={styles.dateShortcuts}>
                 <TouchableOpacity
@@ -997,17 +987,6 @@ const styles = StyleSheet.create({
     color: COLORS.inkLight,
     fontFamily: FONTS.body,
     lineHeight: 20,
-  },
-  dateInput: {
-    fontSize: 16,
-    color: COLORS.ink,
-    fontFamily: FONTS.uiMedium,
-    backgroundColor: COLORS.cream,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
   },
   dateShortcuts: {
     flexDirection: 'row',

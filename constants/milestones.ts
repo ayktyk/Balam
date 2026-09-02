@@ -1,10 +1,21 @@
+import { YASEMIN_BIRTH_DATE } from './yasemin';
+
 export interface MilestonePreset {
   id: string;
   title: string;
   prompt: string;
+  // Tarihi kesin olan adimlar (dogum gibi) icin hazir tarih.
+  // Secilince tarih alani kendiliginden dolar, yanlis tarihlenme olmaz.
+  defaultDate?: Date | null;
 }
 
 export const MILESTONE_PRESETS: MilestonePreset[] = [
+  {
+    id: 'birth',
+    title: 'Doğum',
+    prompt: 'O günü anlat: saat kaçtı, kim oradaydı, ilk gördüğünde ne hissettin?',
+    defaultDate: YASEMIN_BIRTH_DATE,
+  },
   {
     id: 'first-smile',
     title: 'İlk gülüş',

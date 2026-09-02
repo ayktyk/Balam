@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { FadeInView } from '../../components/FadeInView';
 import { Entry } from '../../types/entry';
+import { resolveYaseminAgeLabel } from '../../constants/yasemin';
 
 export default function MilestonesScreen() {
   const { profile } = useAuth();
@@ -194,7 +195,8 @@ export default function MilestonesScreen() {
           <View style={styles.timeline}>
             {milestones.map((entry, index) => {
               const preset = getMilestonePreset(entry.milestoneTag);
-              const date = entry.entryDate.toDate().toLocaleDateString('tr-TR', {
+              const entryDate = entry.entryDate.toDate();
+              const date = entryDate.toLocaleDateString('tr-TR', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -218,7 +220,7 @@ export default function MilestonesScreen() {
                         />
                       )}
                       <Text style={[styles.timelineDate, { color: colors.gold }]}>
-                        {date} · {entry.yaseminAgeLabel}
+                        {date} · {resolveYaseminAgeLabel(entryDate, entry.yaseminAgeLabel)}
                       </Text>
                       <Text style={[styles.timelineTitle, { color: colors.ink }]}>
                         {entry.title ?? preset?.title ?? 'Milestone'}
