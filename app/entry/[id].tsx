@@ -30,7 +30,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { Entry } from '../../types/entry';
 
-import { isCapsuleUnlocked } from '../../constants/yasemin';
+import { isCapsuleUnlocked, resolveYaseminAgeLabel } from '../../constants/yasemin';
 
 export default function EntryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -336,7 +336,9 @@ export default function EntryDetailScreen() {
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.authorName}>{entry.authorName}</Text>
         <Text style={styles.dateText}>{dateStr}</Text>
-        <Text style={styles.ageLabel}>{entry.yaseminAgeLabel}</Text>
+        <Text style={styles.ageLabel}>
+          {resolveYaseminAgeLabel(entryDate, entry.yaseminAgeLabel)}
+        </Text>
       </View>
 
       <View style={[styles.card, entry.isCapsule && !unlocked && styles.cardLocked]}>

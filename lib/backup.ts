@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Entry } from '../types/entry';
+import { resolveYaseminAgeLabel } from '../constants/yasemin';
 
 export interface BackupProgress {
   done: number;
@@ -88,14 +89,18 @@ export function buildAlbumHtml(
 
   const entryCards = visible
     .map((e) => {
-      const date = e.entryDate?.toDate?.()
-        ? e.entryDate.toDate().toLocaleDateString('tr-TR', {
+      const entryDate = e.entryDate?.toDate?.() ?? null;
+      const date = entryDate
+        ? entryDate.toLocaleDateString('tr-TR', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
             weekday: 'long',
           })
         : '';
+      // Yas etiketi kayittaki dondurulmus metin degil, anının tarihinden
+      // yeniden hesaplanir (dogum tarihi sonradan girildi).
+      const ageLabel = resolveYaseminAgeLabel(entryDate, e.yaseminAgeLabel);
 
       const isForeignPrivate = e.isPrivate && e.authorId !== currentUid;
       if (isForeignPrivate) {
@@ -130,7 +135,7 @@ export function buildAlbumHtml(
             <strong>${esc(e.authorName || '')}</strong>
             <span style="color:#6B5B45;font-size:13px;margin-left:auto;">${TYPE_LABELS[e.type] || ''}</span>
           </div>
-          <div style="color:#6B5B45;font-size:13px;margin-bottom:12px;">${date}${e.yaseminAgeLabel ? ' · ' + esc(e.yaseminAgeLabel) : ''}</div>
+          <div style="color:#6B5B45;font-size:13px;margin-bottom:12px;">${date}${ageLabel ? ' · ' + esc(ageLabel) : ''}</div>
           ${badge}${privateBadge}
           ${e.title ? `<h3 style="margin:8px 0 4px;font-family:Georgia,serif;">${esc(e.title)}</h3>` : ''}
           ${photos}

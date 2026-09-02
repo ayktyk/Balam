@@ -35,7 +35,7 @@ import { AudioPlayer } from '../../components/AudioPlayer';
 import { FadeInView } from '../../components/FadeInView';
 import { Entry } from '../../types/entry';
 
-import { isCapsuleUnlocked } from '../../constants/yasemin';
+import { isCapsuleUnlocked, resolveYaseminAgeLabel } from '../../constants/yasemin';
 
 function EntryCard({ entry, index, isParent = true, colors }: { entry: Entry; index: number; isParent?: boolean; colors: ThemeColors }) {
   const entryDate = entry.entryDate.toDate();
@@ -69,7 +69,7 @@ function EntryCard({ entry, index, isParent = true, colors }: { entry: Entry; in
           <View style={styles.cardMeta}>
             <Text style={[styles.authorName, { color: colors.ink }]}>{entry.authorName}</Text>
             <Text style={[styles.dateText, { color: colors.inkLight }]}>
-              {dateStr} · {entry.yaseminAgeLabel}
+              {dateStr} · {resolveYaseminAgeLabel(entryDate, entry.yaseminAgeLabel)}
             </Text>
           </View>
         </View>
